@@ -540,15 +540,12 @@ static uchar usbDeviceRead(uchar *data, uchar len)
             if(usbMsgFlags & USB_FLG_MSGPTR_IS_ROM){    /* ROM data */
 #endif          
                 do{
+										/* assign to char size variable to enforce byte ops */
+										uchar c =
 #if EXPORT_USB
-		    uchar c;
-		    if ((uint16_t)r < BOOTLOADER_ADDRESS)
-			c = *((uchar *)r);
-		    else
-			c = USB_READ_FLASH(r);    /* assign to char size variable to enforce byte ops */
-#else
-                    uchar c = USB_READ_FLASH(r);    /* assign to char size variable to enforce byte ops */
+															(uint16_t)r < BOOTLOADER_ADDRESS ? *((uchar *)r) :
 #endif
+															USB_READ_FLASH(r);
                     *data++ = c;
                     r++;
                 }while(--i);

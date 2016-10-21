@@ -199,29 +199,44 @@ void usbPollLite(uint8_t (*usbFunctionSetup)(uint8_t data[8]))
 #else
 static inline void usbPollLite(void)
 #endif
-      {
-      // This is usbpoll() minus reset logic and double buffering
-        int8_t  len;
-        len = usbRxLen - 3;
+{
+// This is usbpoll() minus reset logic and double buffering
+	int8_t  len;
+	len = usbRxLen - 3;
 
-        if(len >= 0){
+	if(len >= 0){
 #if EXPORT_USB
-            usbMsgPtr = (usbMsgPtr_t)(usbRxBuf + 11);
+			usbMsgPtr = (usbMsgPtr_t)(usbRxBuf + USB_BUFSIZE);
 #endif
-            usbProcessRx(usbRxBuf + 1, len
+			usbProcessRx(usbRxBuf + 1, len
 #if EXPORT_USB
-		,usbFunctionSetup
+									 ,usbFunctionSetup
 #endif
-	    ); // only single buffer due to in-order processing
-            usbRxLen = 0;       /* mark rx buffer as available */
-        }
+			); // only single buffer due to in-order processing
+			usbRxLen = 0;       /* mark rx buffer as available */
+	}
 
-        if(usbTxLen & 0x10){    /* transmit system idle */
-            if(usbMsgLen != USB_NO_MSG){    /* transmit data pending? */
-                usbBuildTxBlock();
-            }
-        }
-      }
+	if(usbTxLen & 0x10){    /* transmit system idle */
+			if(usbMsgLen != USB_NO_MSG){    /* transmit data pending? */
+					usbBuildTxBlock();
+			}
+	}
+}
+			
+void initUSB (void) {
+	/* do this while interrupts are disabled (always) */
+  usbDeviceDisconnect();
+  _delay_ms(300);  
+  usbDeviceConnect();
+
+  usbInit();    // Initialize INT settings after reconnect
+}
+
+void shutdownUSB (void) {
+	usbDeviceDisconnect();
+	USB_INTR_ENABLE = 0;
+	USB_INTR_CFG = 0;       /* also reset config bits */
+}
 
 static void initHardware (void)
 {
@@ -237,25 +252,20 @@ static void initHardware (void)
   WDTCR = 1<<WDP2 | 1<<WDP1 | 1<<WDP0; 
 #endif  
 
-  
-  usbDeviceDisconnect();  /* do this while interrupts are disabled */
-  _delay_ms(300);  
-  usbDeviceConnect();
-
-  usbInit();    // Initialize INT settings after reconnect
+	initUSB();
 }
 
-#ifdef BOOTLOADER_DATA
 __attribute__((naked, section(".exports"))) void __exports(void) {
 #if EXPORT_USB
-  asm volatile(
-  " rcall __vector_3 \n\t"
+		asm volatile(
+  " rcall __init     \n\t" // Just a placeholder
   " reti             \n\t"
   " rjmp usbPollLite \n\t"
+  " rjmp shutdownUSB \n\t"
+  " rjmp initUSB     \n\t"
   );
 #endif
 }
-#endif
 
 /* ------------------------------------------------------------------------ */
 // reset system to a normal state and launch user program
@@ -277,30 +287,6 @@ static inline void leaveBootloader(void) {
 #endif
 }
 
-__attribute__((naked, section(".vectors"))) void __vectors(void) {
-  asm volatile(" rjmp __init");
-}
-__attribute__((naked, section(".init0"))) void __init(void) {
-}
-__attribute__((naked, section(".init2"))) void __init2(void) {
-  asm volatile(" clr r1");
-#if (defined BOOTLOADER_DATA) || (!defined ENABLE_UNSAFE_OPTIMIZATIONS)
-
-#define INIT2XS(s) INIT2S(s)
-#define INIT2S(s) \
-  " out 0x3f,r1       \n\t" \
-  " ldi r28,lo8("#s") \n\t" \
-  " ldi r29,hi8("#s") \n\t" \
-  " out 0x3d,r28      \n\t" \
-  " out 0x3e,r29      \n\t"
-#ifdef BOOTLOADER_DATA
-  asm volatile(INIT2XS(BOOTLOADER_DATA-1));
-#else
-  asm volatile(INIT2XS(RAMEND));
-#endif
-
-#endif
-}
 void USB_INTR_VECTOR(void);
 __attribute__((naked, section(".init9"))) void main(void) {
   uint8_t osccal_tmp;
@@ -387,6 +373,7 @@ __attribute__((naked, section(".init9"))) void main(void) {
 #else
       usbPollLite();
 #endif
+
       idlePolls.w++;
 
       // Try to execute program when bootloader times out      
@@ -420,10 +407,8 @@ __attribute__((naked, section(".init9"))) void main(void) {
 
     LED_EXIT();
 
-#if !EXPORT_NOTRESET
-    initHardware();  /* Disconnect micronucleus */    
-    USB_INTR_ENABLE = 0;
-    USB_INTR_CFG = 0;       /* also reset config bits */
+#if !EXPORT_USB_NORESET
+		shutdownUSB();
 #endif
   }
    

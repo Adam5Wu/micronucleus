@@ -9,10 +9,10 @@
  *       USB D+ :   PB1
  *       Entry  :   Always
  *       LED    :   PB2, Active Low
- *       OSCCAL :   Revert to precalibrated value (8 MHz)
- * Note: can use 12 MHz V-USB without PLL due to stable RC-osc in ATTiny841
+ *       OSCCAL :   Stays when USB export enabled
+ * Note: Can use 12 MHz V-USB without PLL due to stable RC-osc in ATTiny841
  *       Flash write time may be too low.
- * Last Change:     Mar 16,2014
+ * Last Change:     Oct 20,2016
  *
  * License: GNU GPL v2 (see License.txt
  */
@@ -172,7 +172,7 @@
 #define AUTO_EXIT_NO_USB_MS    0
 #define AUTO_EXIT_MS           6000
 
- /*
+/*
  *  Defines the setting of the RC-oscillator calibration after quitting the bootloader. (OSCCAL)
  * 
  *  OSCCAL_RESTORE_DEFAULT    Set this to '1' to revert to OSCCAL factore calibration after bootlaoder exit.
@@ -198,8 +198,10 @@
  */
  
 #define OSCCAL_ENTRY_ALWAYS
+#define OSCCAL_RESTORE_DEFAULT 0
 #define OSCCAL_SAVE_CALIB 1
 #define OSCCAL_HAVE_XTAL 0
+#define OSCCAL_SLOW_PROGRAMMING 1
   
 /*  
  *  Defines handling of an indicator LED while the bootloader is active.  
@@ -246,6 +248,35 @@
   #define LED_INIT(x)
   #define LED_EXIT(x)
   #define LED_MACRO(x)
+#endif
+
+/*
+ *  Define bootloader export strategy.
+ *
+ *  In order for the bootloader to export entrypoints to the client program,
+ *  BOOTLOADER_ADDRESS and BOOTLOADER_DATA must be set to 0 by the configuration Makefile.inc.
+ *  The makefile will calculate the proper addresses and place global data above the stack.
+ *  When the client stack matches (EXPORT_STACK), the client can utilize functionality
+ *  in the bootloader even after the bootloader exits.
+ *
+ *  EXPORT_STACK               The bootloader will export its stack pointer so that the client can
+ *                             avoid clobbering global data. The client must not initialize its
+ *                             stack pointer (.init2) for this to work.
+ *
+ *  EXPORT_USB                 The bootloader will export entry points to usbdrv.
+ *  
+ *  EXPORT_USB_NORESET         The bootloader will not reset usb hardware so that the client can
+ *                             continue using it.
+ *
+ */
+
+#define EXPORT_STACK           1
+#define EXPORT_USB             1
+#define EXPORT_USB_NORESET     0
+
+#if EXPORT_USB
+	#define EXPORT_STACK           1
+	#define OSCCAL_RESTORE_DEFAULT 0
 #endif
 
 /* --------------------------------------------------------------------------- */

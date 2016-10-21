@@ -6,11 +6,10 @@
 # Copyright: (c) 2007 by OBJECTIVE DEVELOPMENT Software GmbH
 # License: GNU GPL v2 (see License.txt)
 
-#CONFIG ?= t85_default
+CONFIG ?= t85_default
 #CONFIG ?= t85_aggressive
 #CONFIG ?= t841_default
 #CONFIG ?= t167_default
-CONFIG ?= t84_export
 
 ###############################################################################
 # Configure the following variables according to your AVR.
@@ -53,21 +52,21 @@ endif
 CFLAGS += -nostartfiles -ffunction-sections -fdata-sections -fpack-struct -fno-inline-small-functions -fno-move-loop-invariants -fno-tree-scev-cprop
 
 LDFLAGS = -Wl,--relax,--section-start=.text=$(BOOTLOADER_ADDRESS),--gc-sections,-Map=main.map
-ifdef BOOTLOADER_DATA
-  # prepare global data to enable exports
-  CFLAGS += -DBOOTLOADER_DATA=0x$(BOOTLOADER_DATA)
-  LDFLAGS += -Wl,--undefined=__exports
-  ifneq ($(BOOTLOADER_DATA),0)
-    # place the data above the stack
-    LDFLAGS += -Wl,--section-start=.data=0x$(shell echo "obase=16; ibase=16; scale=0; $(BOOTLOADER_DATA)+800000" | bc)
-  endif
-endif
-ifdef BOOTLOADER_EXPORTS
-  # place the exports at end of flash
-  LDFLAGS += -Wl,--section-start=.exports=$(BOOTLOADER_EXPORTS)
+
+# prepare global data to enable exports
+CFLAGS += -DBOOTLOADER_DATA=0x$(BOOTLOADER_DATA)
+LDFLAGS += -Wl,--undefined=__exports
+ifneq ($(BOOTLOADER_DATA),0)
+	# place the data above the stack
+	LDFLAGS += -Wl,--section-start=.data=0x$(shell echo "obase=16; ibase=16; scale=0; $(BOOTLOADER_DATA)+800000" | bc)
 endif
 
-OBJECTS = usbdrv/usbdrvasm.o usbdrv/oddebug.o main.o 
+ifdef BOOTLOADER_EXPORTS
+  # place the exports at end of flash
+  LDFLAGS += -Wl,--section-start=.exports=0x$(BOOTLOADER_EXPORTS)
+endif
+
+OBJECTS = crt1.o usbdrv/usbdrvasm.o usbdrv/oddebug.o main.o 
 OBJECTS += osccalASM.o
 
 # symbolic targets:
@@ -121,29 +120,31 @@ main.bin:	$(OBJECTS)
 ifeq ($(BOOTLOADER_ADDRESS),0)
 # now that we know the size of the bootloader, we can build
 # it with the correct address by second pass
-	@rm main.o ; $(MAKE) $@ BOOTLOADER_ADDRESS=$$( \
-	avr-size $@ | tail -n 1 | ( read size dummy ; echo "obase=16; scale=0; \
-	$(FLASHEND)+1 - ($$size + $(SPM_PAGESIZE)-1) / $(SPM_PAGESIZE) * $(SPM_PAGESIZE)") | bc) \
-	$(if $(BOOTLOADER_DATA), BOOTLOADER_DATA=$$(avr-size $@ | tail -n 1 | ( read dummy0 size0 size1 dummy1 ; \
-	echo "obase=16; scale=0; $(RAMEND)+1 - $$size0 - $$size1") | bc)) \
-	$(if $(BOOTLOADER_DATA), BOOTLOADER_EXPORTS=$$(avr-size -A $@ | grep ^.exports | ( read section size dummy ; \
-	echo "obase=16; scale=0; $(FLASHEND)+1 - $$size") | bc))
+	@echo "Building Micronucleus configuration: $(CONFIG)" ;\
+	text=`avr-size $@ | tail -n 1 | while read size dummy; do echo $$size; done` ;\
+	tfit=$$(( ($$text+$(SPM_PAGESIZE)-1)/$(SPM_PAGESIZE)*$(SPM_PAGESIZE) )) ;\
+	echo -n "Bootloader text $$tfit ($$(( $$tfit-$$text )) bytes padding), " ;\
+	addr=`echo "obase=16; scale=0; $(FLASHEND)+1-$$tfit" | bc` ;\
+	echo "address 0x$$addr" ;\
+	data=`avr-size $@ | tail -n 1 | while read dummy0 size0 size1 dummy1; do echo $$(( $$size0+$$size1 )); done` ;\
+	daddr=`echo "obase=16; scale=0; $(RAMEND)+1-$$data" | bc` ;\
+	echo "Bootloader data $$data bytes, address 0x$$daddr" ;\
+	exp=`avr-size -A $@ | grep ^.exports | while read section size dummy; do echo $$size; done` ;\
+	expaddr=`echo "obase=16; scale=0; $(FLASHEND)+1-$$exp" | bc` ;\
+	echo "Bootloader exports $$exp bytes, address 0x$$expaddr" ;\
+	rm $@ *.o ;\
+	"$(MAKE)" $@ BOOTLOADER_ADDRESS=$$addr BOOTLOADER_DATA=$$daddr BOOTLOADER_EXPORTS=$$expaddr
+else
+	@echo "BOOTLOADER_ADDRESS = 0x$(BOOTLOADER_ADDRESS)"
+	@echo "BOOTLOADER_DATA = 0x$(BOOTLOADER_DATA)"
+	@echo "BOOTLOADER_EXPORTS = 0x$(BOOTLOADER_EXPORTS)"
+	@avr-size $@
 endif
 
 main.hex:	main.bin
-	@echo Building Micronucleus configuration: $(CONFIG)
 	@rm -f main.hex main.eep.hex
 	@avr-objcopy -j .text -j .exports -O ihex main.bin main.hex
-	@echo Size of sections:
-	@avr-size main.bin	
-	@echo Size of binary hexfile. Use the "data" size to calculate the bootloader address:
-	@avr-size main.hex
-ifdef SPM_PAGESIZE
-	@echo -n "BOOTLOADER_ADDRESS configured: $(BOOTLOADER_ADDRESS), calculated: " ;\
-	avr-size $@ | tail -n 1 | ( read dummy0 size dummy1 ; echo "obase=16; scale=0; \
-	(address = ($(FLASHEND)+1 - ($$size + $(SPM_PAGESIZE)-1) / $(SPM_PAGESIZE) * $(SPM_PAGESIZE))); \
-	\"padding (decimal): \" ; obase=10; $(FLASHEND)+1 - address - $$size") | bc
-endif
+	@avr-size $@
 
 upgrade: main.bin
 	avr-objcopy -O binary main.bin main.raw

@@ -4,7 +4,7 @@
 
 # Controller type: ATtiny 85
 # Configuration:   Size optimized. Uses 16 MHz V-USB implementation, which may be instable with some computers
-# Last Change:     Jan 11,2015
+# Last Change:     Oct 20,2016
 
 # Enable unsafe optimizions. This will disable several safety features in microncleus to save around 40 more bytes
 # 
@@ -19,13 +19,11 @@ F_CPU = 16000000
 DEVICE = attiny85
 SPM_PAGESIZE = 64
 FLASHEND = 8191
+RAMEND = 607
 
-# hexadecimal address for bootloader section to begin. To calculate the best value:
-# - make clean; make main.hex; ### output will list data: 2124 (or something like that)
-# - for the size of your device (8kb = 1024 * 8 = 8192) subtract above value 2124... = 6068
-# - How many pages in is that? 6068 / 64 (tiny85 page size in bytes) = 94.8125
-# - round that down to 94 - our new bootloader address is 94 * 64 = 6016, in hex = 1780
-BOOTLOADER_ADDRESS = 1A40
+# makefile will calculate these
+BOOTLOADER_ADDRESS = 0
+BOOTLOADER_DATA = 0
 
 FUSEOPT = -U lfuse:w:0xe1:m -U hfuse:w:0xdd:m -U efuse:w:0xfe:m
 FUSEOPT_DISABLERESET = -U lfuse:w:0xe1:m -U efuse:w:0xfe:m -U hfuse:w:0x5d:m
