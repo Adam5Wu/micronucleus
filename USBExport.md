@@ -12,6 +12,8 @@ A modified Digistump DigiMouse library and Arduino project is included in the [e
 The original project generates a 4,332 byte binary;
 while the "lite" version which uses bootloader exported USB function generates 2,156 byte binary.
 The saving is over 2KB.
+- If PRNG functions (random, etc.) is removed, the binary is further reduced to 1,332 bytes
+  - This means bootloader + the mouse program together fit even MCU with 4KB of flash
 
 # Caveats
 ## Bootloader compatibility
