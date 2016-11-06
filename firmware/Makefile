@@ -6,7 +6,8 @@
 # Copyright: (c) 2007 by OBJECTIVE DEVELOPMENT Software GmbH
 # License: GNU GPL v2 (see License.txt)
 
-CONFIG ?= t85_default
+CONFIG ?= t85_export
+#CONFIG ?= t85_default
 #CONFIG ?= t85_aggressive
 #CONFIG ?= t841_default
 #CONFIG ?= t167_default
@@ -29,26 +30,17 @@ PROGRAMMER ?= -c usbtiny
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE) 
 CC = avr-gcc
 
-# single pass: BOOTLOADER_ADDRESS initialized to a valid address
-# the bootloader starts at that address, export table not generated
-#
-# two pass: BOOTLOADER_ADDRESS initialized to 0
-# optimal BOOTLOADER_ADDRESS calculated in pass 1, applied in pass 2
-# export table not generated
-#
-# export table generation: BOOTLOADER_DATA initialized to 0
-# BOOTLOADER_DATA calculated in pass 1, used to place global data above stack in pass 2
-# BOOTLOADER_EXPORTS calculated in pass 1, used to place export table at FLASHEND in pass 2
+ifeq ($(BOOTLOADER_ADDRESS),0)
+	BOOTLOADER_CALC=1
+	BOOTLOADER_ADDRESS=1000
+	BOOTLOADER_DATA=200
+	BOOTLOADER_EXPORTS=1F00
+endif
 
 # Options:
 CFLAGS += -I. -g2 -Os # -Wall
 CFLAGS += -I$(CONFIGPATH) -mmcu=$(DEVICE) -DF_CPU=$(F_CPU)
-ifeq ($(BOOTLOADER_ADDRESS),0)
-  # the codesize turns out wrong if we leave BOOTLOADER_ADDRESS == 0
-  CFLAGS += -DBOOTLOADER_ADDRESS=0x200
-else
-  CFLAGS += -DBOOTLOADER_ADDRESS=0x$(BOOTLOADER_ADDRESS)
-endif
+CFLAGS += -DBOOTLOADER_ADDRESS=0x$(BOOTLOADER_ADDRESS)
 CFLAGS += -nostartfiles -ffunction-sections -fdata-sections -fpack-struct -fno-inline-small-functions -fno-move-loop-invariants -fno-tree-scev-cprop
 
 LDFLAGS = -Wl,--relax,--section-start=.text=$(BOOTLOADER_ADDRESS),--gc-sections,-Map=main.map
@@ -56,15 +48,11 @@ LDFLAGS = -Wl,--relax,--section-start=.text=$(BOOTLOADER_ADDRESS),--gc-sections,
 # prepare global data to enable exports
 CFLAGS += -DBOOTLOADER_DATA=0x$(BOOTLOADER_DATA)
 LDFLAGS += -Wl,--undefined=__exports
-ifneq ($(BOOTLOADER_DATA),0)
-	# place the data above the stack
-	LDFLAGS += -Wl,--section-start=.data=0x$(shell echo "obase=16; ibase=16; scale=0; $(BOOTLOADER_DATA)+800000" | bc)
-endif
+# place the data above the stack
+LDFLAGS += -Wl,--section-start=.data=0x$(shell echo "obase=16; ibase=16; scale=0; $(BOOTLOADER_DATA)+800000" | bc)
 
-ifdef BOOTLOADER_EXPORTS
-  # place the exports at end of flash
-  LDFLAGS += -Wl,--section-start=.exports=0x$(BOOTLOADER_EXPORTS)
-endif
+# place the exports at end of flash
+LDFLAGS += -Wl,--section-start=.exports=0x$(BOOTLOADER_EXPORTS)
 
 OBJECTS = crt1.o usbdrv/usbdrvasm.o usbdrv/oddebug.o main.o 
 OBJECTS += osccalASM.o
@@ -116,11 +104,15 @@ clean:
 
 # file targets:
 main.bin:	$(OBJECTS)
+	@echo "Building Micronucleus configuration: $(CONFIG)"
+ifndef BOOTLOADER_CALC
+	@echo "BOOTLOADER_ADDRESS = 0x$(BOOTLOADER_ADDRESS)"
+	@echo "BOOTLOADER_DATA = 0x$(BOOTLOADER_DATA)"
+	@echo "BOOTLOADER_EXPORTS = 0x$(BOOTLOADER_EXPORTS)"
+endif
 	@$(CC) $(CFLAGS) -o main.bin $(OBJECTS) $(LDFLAGS)
-ifeq ($(BOOTLOADER_ADDRESS),0)
-# now that we know the size of the bootloader, we can build
-# it with the correct address by second pass
-	@echo "Building Micronucleus configuration: $(CONFIG)" ;\
+ifdef BOOTLOADER_CALC
+	@echo "Calculating addresses..." ; avr-size $@ ;\
 	text=`avr-size $@ | tail -n 1 | while read size dummy; do echo $$size; done` ;\
 	tfit=$$(( ($$text+$(SPM_PAGESIZE)-1)/$(SPM_PAGESIZE)*$(SPM_PAGESIZE) )) ;\
 	echo -n "Bootloader text $$tfit ($$(( $$tfit-$$text )) bytes padding), " ;\
@@ -132,13 +124,7 @@ ifeq ($(BOOTLOADER_ADDRESS),0)
 	exp=`avr-size -A $@ | grep ^.exports | while read section size dummy; do echo $$size; done` ;\
 	expaddr=`echo "obase=16; scale=0; $(FLASHEND)+1-$$exp" | bc` ;\
 	echo "Bootloader exports $$exp bytes, address 0x$$expaddr" ;\
-	rm $@ *.o ;\
-	"$(MAKE)" $@ BOOTLOADER_ADDRESS=$$addr BOOTLOADER_DATA=$$daddr BOOTLOADER_EXPORTS=$$expaddr
-else
-	@echo "BOOTLOADER_ADDRESS = 0x$(BOOTLOADER_ADDRESS)"
-	@echo "BOOTLOADER_DATA = 0x$(BOOTLOADER_DATA)"
-	@echo "BOOTLOADER_EXPORTS = 0x$(BOOTLOADER_EXPORTS)"
-	@avr-size $@
+	"$(MAKE)" --no-print-directory clean $@ BOOTLOADER_ADDRESS=$$addr BOOTLOADER_DATA=$$daddr BOOTLOADER_EXPORTS=$$expaddr
 endif
 
 main.hex:	main.bin

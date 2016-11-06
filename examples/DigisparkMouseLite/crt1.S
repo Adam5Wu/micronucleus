@@ -44,63 +44,12 @@
 	#define XJMP rjmp
 #endif
 
-	#define XCALL rcall
+	.section .init1, "ax", @progbits
+	rjmp __init3
 
-	.macro	vector name
-	.weak	\name
-	.set	\name, __init
-	XJMP	\name
-	.endm
+	.section .init3, "ax", @progbits
+	.weak	__init3
+__init3:
 
-	.section .vectors, "ax", @progbits
-	.global	__vectors
-	.global	__bad_interrupt
-	.func	__vectors
-
-__bad_interrupt:
-__vectors:
-	XJMP	__init
-	.endfunc
-
-	/* Handle unexpected interrupts (enabled and no handler), which
-		 usually indicate a bug.	Jump to the __vector_default function
-		 if defined by the user, otherwise jump to the reset address.
-
-		 This must be in a different section, otherwise the assembler
-		 will resolve "rjmp" offsets and there will be no relocs.	*/
-
-	.section .init0, "ax", @progbits
-	.weak	__init
-;	.func	__init
-__init:
-
-	.weak	__stack
-#if BOOTLOADER_DATA
-	.set	__stack, BOOTLOADER_DATA-1
-#else
-	.set	__stack, RAMEND
-#endif
-
-	/* By default, malloc() uses the current value of the stack pointer
-		 minus __malloc_margin as the highest available address.
-
-		 In some applications with external SRAM, the stack can be below
-		 the data section (in the internal SRAM - faster), and __heap_end
-		 should be set to the highest address available for malloc().	*/
-	.weak	__heap_end
-	.set	__heap_end, 0
-
-	.section .init2, "ax", @progbits
-	clr		R1
-
-#ifndef ENABLE_UNSAFE_OPTIMIZATIONS
-	out		0x3f, r1
-	ldi		r28, lo8(__stack)
-	ldi		r29, hi8(__stack)
-	out		0x3d, r28
-	out		0x3e, r29
-#endif
 	.section .init9, "ax", @progbits
 	XJMP	main
-
-;	.endfunc

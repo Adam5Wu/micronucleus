@@ -118,6 +118,9 @@ USB messages, even if they address another (low-speed) device on the same bus.
 
 */
 
+#ifdef __cplusplus
+extern "C"{
+#endif
 /* ------------------------------------------------------------------------- */
 /* --------------------------- Module Interface ---------------------------- */
 /* ------------------------------------------------------------------------- */
@@ -765,5 +768,8 @@ typedef struct usbRequest{
 #define USBRQ_HID_SET_PROTOCOL	0x0b
 
 /* ------------------------------------------------------------------------- */
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __usbdrv_h_included__ */

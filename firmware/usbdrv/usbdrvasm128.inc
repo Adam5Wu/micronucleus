@@ -141,7 +141,12 @@ foundK:
 ;we have 1 bit time for setup purposes, then sample again. Numbers in brackets
 ;are cycles from center of first sync (double K) bit after the instruction
     push    YH                  ;[2]
+#ifndef MNHACK_INT_FREE
     lds     YL, usbInputBufOffset;[4]
+#else
+    clr     YL                   ;[3]
+;		nop                          ;[4]
+#endif
     clr     YH                  ;[6]
     subi    YL, lo8(-(usbRxBuf));[7]
     sbci    YH, hi8(-(usbRxBuf));[8]

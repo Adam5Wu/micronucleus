@@ -164,7 +164,11 @@ foundK:                         ;[-15]
 ;are cycles from center of first sync (double K) bit after the instruction
     push    x4                  ;[-14]
 ;   [---]                       ;[-13]
+#ifndef MNHACK_INT_FREE
     lds     YL, usbInputBufOffset;[-12] used to toggle the two usb receive buffers
+#else
+    clr     YL                   ;[-12]
+#endif
 ;   [---]                       ;[-11]
     clr     YH                  ;[-10]
     subi    YL, lo8(-(usbRxBuf));[-9] [rx loop init]

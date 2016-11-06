@@ -14,6 +14,13 @@ general code (preprocessor acrobatics and CRC computation) and then includes
 the file appropriate for the given clock rate.
 */
 
+/* This copy of usbdrvasm.S was optimized to reduce the memory footprint with micronucleus V2
+ *
+ * Changes:
+/*		a) Interrupt-free USB handling.
+ */
+#define MNHACK_INT_FREE
+
 #define __SFR_OFFSET 0      /* used by avr-libc's register definitions */
 #include "usbportability.h"
 #include "usbdrv.h"         /* for common defs */
@@ -33,7 +40,10 @@ the file appropriate for the given clock rate.
 /* Some assembler dependent definitions and declarations: */
 
 #ifdef __IAR_SYSTEMS_ASM__
-    extern  usbRxBuf, usbDeviceAddr, usbNewDeviceAddr, usbInputBufOffset
+    extern  usbRxBuf, usbDeviceAddr, usbNewDeviceAddr
+#ifndef MNHACK_INT_FREE
+		extern  usbInputBufOffset
+#endif
     extern  usbCurrentTok, usbRxLen, usbRxToken, usbTxLen
     extern  usbTxBuf, usbTxStatus1, usbTxStatus3
 #   if USB_COUNT_SOF

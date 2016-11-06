@@ -11,9 +11,9 @@
  *       LED    :   PB2, Active Low
  *       OSCCAL :   Stays when USB export enabled
  * Note: can use 12 MHz V-USB without PLL due to stable RC-osc in ATTiny84A
- * Last Change:     Oct 20,2016
+ * Last Change:     Nov 04, 2016
  *
- * License: GNU GPL v2 (see License.txt
+ * License: GNU GPL v2 (see License.txt)
  */
 
 #ifndef __bootloaderconfig_h_included__
@@ -247,33 +247,21 @@
 #endif
 
 /*
- *  Define bootloader export strategy.
+ *  Define USB bootloader export strategy.
  *
  *  In order for the bootloader to export entrypoints to the client program,
  *  BOOTLOADER_ADDRESS and BOOTLOADER_DATA must be set to 0 by the configuration Makefile.inc.
  *  The makefile will calculate the proper addresses and place global data above the stack.
- *  When the client stack matches (EXPORT_STACK), the client can utilize functionality
- *  in the bootloader even after the bootloader exits.
+ *  The client can utilize functionality in the bootloader even after the bootloader exits.
  *
- *  EXPORT_STACK               The bootloader will export its stack pointer so that the client can
- *                             avoid clobbering global data. The client must not initialize its
- *                             stack pointer (.init2) for this to work.
- *
- *  EXPORT_USB                 The bootloader will export entry points to usbdrv.
- *  
- *  EXPORT_USB_NORESET         The bootloader will not reset usb hardware so that the client can
- *                             continue using it.
- *
+ *  The client must not initialize its stack pointer (.init2) for this to work.
  */
-
-#define EXPORT_STACK           1
-#define EXPORT_USB             1
-#define EXPORT_USB_NORESET     0
-
+#define EXPORT_USB             0
+	
 #if EXPORT_USB
-	#define EXPORT_STACK           1
 	#define OSCCAL_RESTORE_DEFAULT 0
 #endif
+
 
 /* --------------------------------------------------------------------------- */
 /* Micronucleus internal configuration. Do not change anything below this line */

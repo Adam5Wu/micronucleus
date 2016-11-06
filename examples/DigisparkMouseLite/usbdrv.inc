@@ -32,7 +32,7 @@ documentation of the entire driver.
 /* raw USB registers / interface to assembler code: */
 #ifndef MNHACK_INT_FREE
 	uchar usbRxBuf[2*USB_BUFSIZE];	/* double raw RX buffer: PID, 8 bytes data, 2 bytes CRC */
-	uchar	usbInputBufOffset;	/* offset in usbRxBuf used for low level receiving */
+	uchar	usbInputBufOffset;				/* offset in usbRxBuf used for low level receiving */
 #else
 	uchar usbRxBuf[USB_BUFSIZE];	/* raw RX buffer: PID, 8 bytes data, 2 bytes CRC */
 #endif

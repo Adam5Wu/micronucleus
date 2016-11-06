@@ -206,7 +206,7 @@
  *
  */
 
-#define LED_MODE    NONE
+#define LED_MODE    ACTIVE_HIGH
 
 #define LED_DDR     DDRB
 #define LED_PORT    PORTB
@@ -229,11 +229,11 @@
 #if LED_MODE==ACTIVE_HIGH
   #define LED_INIT(x)   LED_DDR   |= _BV(LED_PIN);
   #define LED_EXIT(x)   {LED_DDR  &=~_BV(LED_PIN);LED_PORT  &=~_BV(LED_PIN);}
-  #define LED_MACRO(x)  if ( x & 0x4c ) {LED_PORT&=~_BV(LED_PIN);} else {LED_PORT|=_BV(LED_PIN);}
+  #define LED_MACRO(x)  if ( x & 0xBF ) {LED_PORT&=~_BV(LED_PIN);} else {LED_PORT|=_BV(LED_PIN);}
 #elif LED_MODE==ACTIVE_LOW
   #define LED_INIT(x)   LED_PORT &=~_BV(LED_PIN);
   #define LED_EXIT(x)   LED_DDR  &=~_BV(LED_PIN);
-  #define LED_MACRO(x)  if ( x & 0x4c ) {LED_DDR&=~_BV(LED_PIN);} else {LED_DDR|=_BV(LED_PIN);}
+  #define LED_MACRO(x)  if ( x & 0xBF ) {LED_DDR&=~_BV(LED_PIN);} else {LED_DDR|=_BV(LED_PIN);}
 #elif LED_MODE==NONE
   #define LED_INIT(x)
   #define LED_EXIT(x)
@@ -250,7 +250,7 @@
  *
  *  The client must not initialize its stack pointer (.init2) for this to work.
  */
-#define EXPORT_USB             0
+#define EXPORT_USB             1
 	
 #if EXPORT_USB
 	#define OSCCAL_RESTORE_DEFAULT 0

@@ -83,7 +83,11 @@ foundK:                         ;[-12]
 ;   [---]                       ;[-11]
     push    YH                  ;[-10]
 ;   [---]                       ;[-9]
+#ifndef MNHACK_INT_FREE
     lds     YL, usbInputBufOffset;[-8]
+#else
+    clr     YL                  ;[-8]
+#endif
 ;   [---]                       ;[-7]
     clr     YH                  ;[-6]
     subi    YL, lo8(-(usbRxBuf));[-5] [rx loop init]

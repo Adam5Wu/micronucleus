@@ -99,7 +99,11 @@ foundK:                         ;[-16]
 ;are cycles from center of first sync (double K) bit after the instruction
     push    bitcnt              ;[-16]
 ;   [---]                       ;[-15]
+#ifndef MNHACK_INT_FREE
     lds     YL, usbInputBufOffset;[-14]
+#else
+    clr     YL                   ;[-14]
+#endif
 ;   [---]                       ;[-13]
     clr     YH                  ;[-12]
     subi    YL, lo8(-(usbRxBuf));[-11] [rx loop init]

@@ -24,46 +24,51 @@
 
 /* --------------------------- Functional Range ---------------------------- */
 
-#define USB_CFG_HAVE_INTRIN_ENDPOINT    0
+#define USB_CFG_HAVE_INTRIN_ENDPOINT    1
 /* Define this to 1 if you want to compile a version with two endpoints: The
  * default control endpoint 0 and an interrupt-in endpoint (any other endpoint
  * number).
  */
-#define USB_CFG_HAVE_INTRIN_ENDPOINT3   0
-/* Define this to 1 if you want to compile a version with three endpoints: The
- * default control endpoint 0, an interrupt-in endpoint 3 (or the number
- * configured below) and a catch-all default interrupt-in endpoint as above.
- * You must also define USB_CFG_HAVE_INTRIN_ENDPOINT to 1 for this feature.
- */
-#define USB_CFG_EP3_NUMBER              3
-/* If the so-called endpoint 3 is used, it can now be configured to any other
- * endpoint number (except 0) with this macro. Default if undefined is 3.
- */
-/* #define USB_INITIAL_DATATOKEN           USBPID_DATA1 */
-/* The above macro defines the startup condition for data toggling on the
- * interrupt/bulk endpoints 1 and 3. Defaults to USBPID_DATA1.
- * Since the token is toggled BEFORE sending any data, the first packet is
- * sent with the oposite value of this configuration!
- */
-#define USB_CFG_IMPLEMENT_HALT          0
-/* Define this to 1 if you also want to implement the ENDPOINT_HALT feature
- * for endpoint 1 (interrupt endpoint). Although you may not need this feature,
- * it is required by the standard. We have made it a config option because it
- * bloats the code considerably.
- */
-#define USB_CFG_SUPPRESS_INTR_CODE      0
-/* Define this to 1 if you want to declare interrupt-in endpoints, but don't
- * want to send any data over them. If this macro is defined to 1, functions
- * usbSetInterrupt() and usbSetInterrupt3() are omitted. This is useful if
- * you need the interrupt-in endpoints in order to comply to an interface
- * (e.g. HID), but never want to send any data. This option saves a couple
- * of bytes in flash memory and the transmit buffers in RAM.
- */
-#define USB_CFG_INTR_POLL_INTERVAL      10
-/* If you compile a version with endpoint 1 (interrupt-in), this is the poll
- * interval. The value is in milliseconds and must not be less than 10 ms for
- * low speed devices.
- */
+#if USB_CFG_HAVE_INTRIN_ENDPOINT
+	#define USB_CFG_HAVE_INTRIN_ENDPOINT3   0
+	/* Define this to 1 if you want to compile a version with three endpoints: The
+	 * default control endpoint 0, an interrupt-in endpoint 3 (or the number
+	 * configured below) and a catch-all default interrupt-in endpoint as above.
+	 * You must also define USB_CFG_HAVE_INTRIN_ENDPOINT to 1 for this feature.
+	 */
+	#if USB_CFG_HAVE_INTRIN_ENDPOINT3
+		#define USB_CFG_EP3_NUMBER              3
+		/* If the so-called endpoint 3 is used, it can now be configured to any other
+		 * endpoint number (except 0) with this macro. Default if undefined is 3.
+		 */
+	#endif
+	/* #define USB_INITIAL_DATATOKEN           USBPID_DATA1 */
+	/* The above macro defines the startup condition for data toggling on the
+	 * interrupt/bulk endpoints 1 and 3. Defaults to USBPID_DATA1.
+	 * Since the token is toggled BEFORE sending any data, the first packet is
+	 * sent with the oposite value of this configuration!
+	 */
+	#define USB_CFG_IMPLEMENT_HALT          1
+	/* Define this to 1 if you also want to implement the ENDPOINT_HALT feature
+	 * for endpoint 1 (interrupt endpoint). Although you may not need this feature,
+	 * it is required by the standard. We have made it a config option because it
+	 * bloats the code considerably.
+	 */
+	#define USB_CFG_SUPPRESS_INTR_CODE      0
+	/* Define this to 1 if you want to declare interrupt-in endpoints, but don't
+	 * want to send any data over them. If this macro is defined to 1, functions
+	 * usbSetInterrupt() and usbSetInterrupt3() are omitted. This is useful if
+	 * you need the interrupt-in endpoints in order to comply to an interface
+	 * (e.g. HID), but never want to send any data. This option saves a couple
+	 * of bytes in flash memory and the transmit buffers in RAM.
+	 */
+	#define USB_CFG_INTR_POLL_INTERVAL      10
+	/* If you compile a version with endpoint 1 (interrupt-in), this is the poll
+	 * interval. The value is in milliseconds and must not be less than 10 ms for
+	 * low speed devices.
+	 */
+#endif
+
 #ifndef USB_CFG_IS_SELF_POWERED // allow bootloaderconfig.h to override
 #define USB_CFG_IS_SELF_POWERED         0
 #endif
@@ -77,23 +82,25 @@
  * The value is in milliamperes. [It will be divided by two since USB
  * communicates power requirements in units of 2 mA.]
  */
-#define USB_CFG_IMPLEMENT_FN_WRITE      0
-/* Set this to 1 if you want usbFunctionWrite() to be called for control-out
- * transfers. Set it to 0 if you don't need it and want to save a couple of
- * bytes.
- */
-#define USB_CFG_IMPLEMENT_FN_READ       0
-/* Set this to 1 if you need to send control replies which are generated
- * "on the fly" when usbFunctionRead() is called. If you only want to send
- * data from a static buffer, set it to 0 and return the data from
- * usbFunctionSetup(). This saves a couple of bytes.
- */
-#define USB_CFG_IMPLEMENT_FN_WRITEOUT   0
-/* Define this to 1 if you want to use interrupt-out (or bulk out) endpoints.
- * You must implement the function usbFunctionWriteOut() which receives all
- * interrupt/bulk data sent to any endpoint other than 0. The endpoint number
- * can be found in 'usbRxToken'.
- */
+#if EXPORT_USB
+	#define USB_CFG_IMPLEMENT_FN_WRITE      1
+	/* Set this to 1 if you want usbFunctionWrite() to be called for control-out
+	 * transfers. Set it to 0 if you don't need it and want to save a couple of
+	 * bytes.
+	 */
+	#define USB_CFG_IMPLEMENT_FN_READ       1
+	/* Set this to 1 if you need to send control replies which are generated
+	 * "on the fly" when usbFunctionRead() is called. If you only want to send
+	 * data from a static buffer, set it to 0 and return the data from
+	 * usbFunctionSetup(). This saves a couple of bytes.
+	 */
+	#define USB_CFG_IMPLEMENT_FN_WRITEOUT   0
+	/* Define this to 1 if you want to use interrupt-out (or bulk out) endpoints.
+	 * You must implement the function usbFunctionWriteOut() which receives all
+	 * interrupt/bulk data sent to any endpoint other than 0. The endpoint number
+	 * can be found in 'usbRxToken'.
+	 */
+#endif
 #define USB_CFG_HAVE_FLOWCONTROL        0
 /* Define this to 1 if you want flowcontrol over USB data. See the definition
  * of the macros usbDisableAllRequests() and usbEnableAllRequests() in
@@ -166,10 +173,10 @@ return;\
  * for each control- and out-endpoint to check for duplicate packets.
  */
 
- 
+
 #ifndef __ASSEMBLER__
 	void calibrateOscillatorASM(void);
-/*  
+/*
   #if AUTO_EXIT_NO_USB_MS>0
     extern uint16_union_t idlePolls;
     #define USB_RESET_HOOK(resetStarts)  if(!resetStarts){ idlePolls.b[1]=0; calibrateOscillatorASM();}
@@ -184,7 +191,7 @@ return;\
 /* define this macro to 1 if you want the function usbMeasureFrameLength()
  * compiled in. This function can be used to calibrate the AVR's RC oscillator.
  */
- 
+
 
 #if USB_CFG_CLOCK_KHZ<16000
     #define USB_USE_FAST_CRC 1
@@ -194,8 +201,8 @@ return;\
 
 /* If the CPU clock is below 16Mhz you have to use the faster CRC routines.
  * otherwise time outs may occur on USB3.0 ports. This adds 20 bytes.
- */ 
- 
+ */
+
 /* The assembler module has two implementations for the CRC algorithm. One is
  * faster, the other is smaller. This CRC routine is only used for transmitted
  * messages where timing is not critical. The faster routine needs 31 cycles
@@ -211,7 +218,7 @@ return;\
  * own Vendor ID, define it here. Otherwise you may use one of obdev's free
  * shared VID/PID pairs. Be sure to read USB-IDs-for-free.txt for rules!
  */
-#define  USB_CFG_DEVICE_ID 0x53, 0x07 /* = 0x0753 = Digistump */
+#define USB_CFG_DEVICE_ID 0x53, 0x07 /* = 0x0753 = Digistump */
 /* This is the ID of the product, low byte first. It is interpreted in the
  * scope of the vendor ID. If you have registered your own VID with usb.org
  * or if you have licensed a PID from somebody else, define it here. Otherwise
@@ -221,9 +228,6 @@ return;\
 #define USB_CFG_DEVICE_VERSION MICRONUCLEUS_VERSION_MINOR, MICRONUCLEUS_VERSION_MAJOR
 /* Version number of the device: Minor number first, then major number.
  */
- // electric arrow - not compliant with obdev's rules but we'll have our own vid-pid soon
-//#define USB_CFG_VENDOR_NAME 0x2301
-//#define USB_CFG_VENDOR_NAME_LEN 1
 //#define USB_CFG_VENDOR_NAME 'd','i','g','i','s','t','u','m','p','.','c','o','m'
 //#define USB_CFG_VENDOR_NAME_LEN 13
 /* These two values define the vendor name returned by the USB device. The name
