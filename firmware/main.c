@@ -12,7 +12,7 @@
  */
 
 #define MICRONUCLEUS_VERSION_MAJOR 2
-#define MICRONUCLEUS_VERSION_MINOR 30
+#define MICRONUCLEUS_VERSION_MINOR 31
 
 #include <avr/io.h>
 #include <avr/pgmspace.h>
