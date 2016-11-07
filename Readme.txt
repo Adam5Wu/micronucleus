@@ -1,4 +1,4 @@
-Micronucleus V2.03
+Micronucleus V2.30 w/USB export (see USBExport.md for details)
 ==================
 
 Micronucleus is a bootloader designed for AVR ATtiny microcontrollers with a minimal usb interface, cross platform libusb-based program upload tool, and a strong emphasis on bootloader compactness. To the authors knowledge this is, by far, the smallest USB bootloader for AVR ATtiny
@@ -121,6 +121,9 @@ Changes
       device if micronucleus is restarted after an USB error.       
     - #74 Fixed LED_INIT macro so it only modifies the DDR register bit of the LED.
       (Thanks @russdill)
+ 
+• v2.30 November 6th, 2016
+    - Special fork with USB export to user programs. 
  
 Credits
 =======
