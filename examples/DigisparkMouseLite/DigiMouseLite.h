@@ -39,11 +39,11 @@ usbMsgLen_t (*f_usbFunctionDescriptor)(struct usbRequest *rq)
 extern "C" void _shutdownUSB(void);
 
 // Compensate some process delays
-#define USB_POLLTIME_US (5000+500)
+#define USB_POLLTIME_US (5000+1420)
 
 extern "C" void _loopUSB(
-	bool (*f_beforePoll)(uint16_t rem_us),
-	bool (*f_afterPoll)(uint16_t rem_us)
+	bool (*f_beforePoll)(uint16_t rem_us, uchar dev_addr),
+	bool (*f_afterPoll)(uint16_t rem_us, uchar dev_addr)
 );
 
 extern "C" void _usbMsgData(void const *data, uchar flags);
@@ -58,8 +58,8 @@ extern "C" void _usbMsgData(void const *data, uchar flags);
 #endif
 
 // ----- END -----
-	
-	
+
+
 #define MOUSEBTN_LEFT_MASK		0x01
 #define MOUSEBTN_RIGHT_MASK		0x02
 #define MOUSEBTN_MIDDLE_MASK	0x04
@@ -77,7 +77,9 @@ uchar reportBuffer[REPORT_SIZE];
 static unsigned char idle_rate; // in units of 4ms
 
 static bool must_report;
-static uint16_t since_last_report;
+static uint16_t us_buffer;
+static uint16_t idle_ms;
+static uint16_t clock_ms;
 
 const PROGMEM unsigned char mouse_usbHidReportDescriptor[] = { /* USB report descriptor */
 		0x05, 0x01,										 // USAGE_PAGE (Generic Desktop)
@@ -223,37 +225,49 @@ inline void clearMove() {
 	last_sent_report[3] = 0;
 }
 
-bool communicate(uint16_t rem_us) {
-	since_last_report+= USB_POLLTIME_US - rem_us;
-	uint8_t interval = since_last_report / 4000; // in units of 4ms - usb spec stuff
-	
-  // if idle report interval is up
-	if (interval > idle_rate) {
-		since_last_report -= 4000;
-		must_report = 1;
-	} else
+bool (*_checkpoint)(uchar dev_addr);
+
+bool communicate(uint16_t rem_us, uchar dev_addr) {
+	us_buffer += USB_POLLTIME_US - rem_us;
+	uint8_t whole_ms = us_buffer / 1000;
+
+	if (whole_ms) {
+		idle_ms+= whole_ms;
+		clock_ms+= whole_ms;
+		us_buffer %= 1000;
+
+		// if idle report interval is up
+		if (idle_ms > idle_rate*4) { // in unit of 4ms
+			must_report = 1;
+		}
+	}
+	if (!_checkpoint(dev_addr)) return false;
 
 	// if the report has changed, try force an update
-	if (memcmp(last_built_report, last_sent_report, REPORT_SIZE)) {
+	if (!must_report && memcmp(last_built_report, last_sent_report, REPORT_SIZE)) {
 		must_report = 1;
 	}
 
 	// if we want to send a report, signal the host computer to ask us for it with a usb 'interrupt'
 	if (must_report) {
-		if (_usbInterruptIsReady()) {
+		idle_ms = 0;
+		if (dev_addr && _usbInterruptIsReady()) {
 			must_report = 0;
 			buildReport(reportBuffer); // put data into reportBuffer
 			clearMove(); // clear deltas
 			_usbSetInterrupt(reportBuffer, REPORT_SIZE);
 		}
 	}
-	
 	return true;
 }
 
+bool nop(uint16_t rem_us, uchar dev_addr) {
+	return true;
 }
 
-void DigiMouse_main(bool (*f_checkpoint)(uint16_t rem_us)) {
+} // extern "C"
+
+void DigiMouse_main(bool (*f_checkpoint)(uchar dev_addr)) {
 	_initUSB(
 		usbFunctionSetup,
 		#if USB_CFG_IMPLEMENT_FN_WRITE
@@ -267,32 +281,33 @@ void DigiMouse_main(bool (*f_checkpoint)(uint16_t rem_us)) {
 		#endif /* USB_CFG_IMPLEMENT_FN_WRITEOUT */
 		usbFunctionDescriptor
 	);
-	
+
 	idle_rate = DIGIMOUSE_DEFAULT_REPORT_INTERVAL / 4;
-	since_last_report = 0;
+	clock_ms = us_buffer = idle_ms = 0;
 	must_report = false;
 
-	_loopUSB(communicate, f_checkpoint);
-	
+	_checkpoint = f_checkpoint;
+	_loopUSB(communicate, nop);
+
 	_shutdownUSB();
 }
 
-inline void DigiMouse_moveX(char deltaX)	{
+void DigiMouse_moveX(char deltaX)	{
 	if (deltaX == -128) deltaX = -127;
 	last_built_report[1] = *(reinterpret_cast<unsigned char *>(&deltaX));
 }
 
-inline void DigiMouse_moveY(char deltaY) {
+void DigiMouse_moveY(char deltaY) {
 	if (deltaY == -128) deltaY = -127;
 	last_built_report[2] = *(reinterpret_cast<unsigned char *>(&deltaY));
 }
 
-inline void DigiMouse_scroll(char deltaS)	{
+void DigiMouse_scroll(char deltaS)	{
 	if (deltaS == -128) deltaS = -127;
 	last_built_report[3] = *(reinterpret_cast<unsigned char *>(&deltaS));
 }
 
-inline void DigiMouse_move(char deltaX, char deltaY, char deltaS) {
+void DigiMouse_move(char deltaX, char deltaY, char deltaS) {
 	if (deltaX == -128) deltaX = -127;
 	if (deltaY == -128) deltaY = -127;
 	if (deltaS == -128) deltaS = -127;
@@ -301,7 +316,7 @@ inline void DigiMouse_move(char deltaX, char deltaY, char deltaS) {
 	last_built_report[3] = *(reinterpret_cast<unsigned char *>(&deltaS));
 }
 
-inline void DigiMouse_moveClick(char deltaX, char deltaY, char deltaS, char buttons) {
+void DigiMouse_moveClick(char deltaX, char deltaY, char deltaS, char buttons) {
 	if (deltaX == -128) deltaX = -127;
 	if (deltaY == -128) deltaY = -127;
 	if (deltaS == -128) deltaS = -127;
@@ -311,23 +326,23 @@ inline void DigiMouse_moveClick(char deltaX, char deltaY, char deltaS, char butt
 	last_built_report[3] = *(reinterpret_cast<unsigned char *>(&deltaS));
 }
 
-inline void DigiMouse_rightClick(){
+void DigiMouse_rightClick(){
 	last_built_report[0] = MOUSEBTN_RIGHT_MASK;
 }
 
-inline void DigiMouse_leftClick(){
+void DigiMouse_leftClick(){
 	last_built_report[0] = MOUSEBTN_RIGHT_MASK;
 }
 
-inline void DigiMouse_middleClick(){
+void DigiMouse_middleClick(){
 	last_built_report[0] = MOUSEBTN_RIGHT_MASK;
 }
 
-inline void DigiMouse_setButtons(unsigned char buttons) {
+void DigiMouse_setButtons(unsigned char buttons) {
 	last_built_report[0] = buttons;
 }
 
-inline void DigiMouse_setValues(unsigned char values[]) {
+void DigiMouse_setValues(unsigned char values[]) {
 	memcpy(last_built_report, values, REPORT_SIZE);
 }
 

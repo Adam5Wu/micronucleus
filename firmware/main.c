@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Project: Micronucleus -	v2.3
  *
  * Micronucleus V2.3						(c) 2016 Tim Bo"scke - cpldcpu@gmail.com
@@ -240,7 +240,7 @@ static void usbFunctionWriteOut(uchar *data, uchar len) {
 #endif /* USB_CFG_IMPLEMENT_FN_WRITEOUT */
 
 // Handle descriptor requests for bootloader
-static usbMsgLen_t usbFunctionDescriptor(struct usbRequest *rq) {	
+static usbMsgLen_t usbFunctionDescriptor(struct usbRequest *rq) {
 	switch (rq->wValue.bytes[1]) {
 		case USBDESCR_DEVICE:		/* 1 */
 			usbMsgData(usbDescriptorDevice, USB_FLG_MSGPTR_IS_ROM);
@@ -303,8 +303,6 @@ void initUSB (
 	void
 #endif
 ) {
-	usbDeviceDisconnect();
-
 	usbInit(
 	#if EXPORT_USB
 		f_usbFunctionSetup,
@@ -320,9 +318,12 @@ void initUSB (
 		f_usbFunctionDescriptor
 	#endif
 	);		// Initialize INT settings after reconnect
-
-	_delay_ms(300);
 	usbDeviceConnect();
+}
+
+__attribute__((noinline))
+void _delay_100ms(void) {
+	_delay_ms(100);
 }
 
 void shutdownUSB (void) {
@@ -330,6 +331,12 @@ void shutdownUSB (void) {
 
 	USB_INTR_ENABLE = 0;
 	USB_INTR_CFG = 0;			 /* also reset config bits */
+	
+	LED_MACRO(0x00);
+	_delay_100ms();
+	_delay_100ms();
+	LED_MACRO(0xFF);
+	_delay_100ms();
 }
 
 static inline void initHardware (void)
@@ -345,6 +352,8 @@ static inline void initHardware (void)
 	WDTCR = 1<<WDCE | 1<<WDE;
 	WDTCR = 1<<WDP2 | 1<<WDP1 | 1<<WDP0;
 #endif
+
+	shutdownUSB();
 }
 
 static inline void usbPollLite(void) {
@@ -366,6 +375,8 @@ static inline void usbPollLite(void) {
 	}
 }
 
+// 15 clockcycles per loop, 10ms timeout
+#define USB_RESET_TIMEOUT (uint16_t)(F_CPU/(1000.0f*15.0f/10.0f))
 // 15 clockcycles per loop, 5ms timeout
 #define USB_INT_TIMEOUT (uint16_t)(F_CPU/(1000.0f*15.0f/5.0f))
 #define USB_POLLREM_US(CTR) (CTR/(uint16_t)(F_CPU/1.0e6f/15.0f))
@@ -374,15 +385,15 @@ static inline void usbPollLite(void) {
 
 //void USB_INTR_VECTOR(void);
 void loopUSB(
-	bool (*f_beforePoll)(uint16_t rem_us),
-	bool (*f_afterPoll)(uint16_t rem_us)
+	bool (*f_beforePoll)(uint16_t rem_us, uchar dev_addr),
+	bool (*f_afterPoll)(uint16_t rem_us, uchar dev_addr)
 ) {
-	do {		
+	uint16_t	resetctr = USB_RESET_TIMEOUT;
+	do {
 		uint16_t fastctr = USB_INT_TIMEOUT;
-		uint8_t	resetctr = 100;
 
 		do {
-			if ((USBIN & USBMASK) != 0) resetctr = 100;
+			if ((USBIN & USBMASK) != 0) resetctr = USB_RESET_TIMEOUT;
 
 			if (!--resetctr) { // reset encountered
 				usbNewDeviceAddr = 0;	 // bits from the reset handling of usbpoll()
@@ -403,11 +414,11 @@ void loopUSB(
 		wdr();
 
 		uint16_t rem_us = USB_POLLREM_US(fastctr);
-		if (!f_beforePoll(rem_us)) break;
+		if (!f_beforePoll(rem_us, usbDeviceAddr)) break;
 
 		usbPollLite();
 
-		if (!f_afterPoll(rem_us)) break;
+		if (!f_afterPoll(rem_us, usbDeviceAddr)) break;
 
 		// Test whether another interrupt occurred during the processing of USBpoll and commands.
 		// If yes, we missed a data packet on the bus. Wait until the bus was idle for 8.8µs to
@@ -462,7 +473,7 @@ static inline void leaveBootloader(void) {
 #endif
 }
 
-static bool CommandHandling(uint16_t rem_us) {
+static bool CommandHandling(uint16_t rem_us, uchar dev_addr) {
 	// Commands are only evaluated after next USB transmission or after 5 ms passed
 	switch (command) {
 		case cmd_erase_application:
@@ -481,7 +492,7 @@ static bool CommandHandling(uint16_t rem_us) {
 	return true;
 }
 
-static bool IdleCheck(uint16_t rem_us) {
+static bool IdleCheck(uint16_t rem_us, uchar dev_addr) {
 	if (rem_us != 0) {
 		idlePolls.w = 0; // reset idle polls when we get usb traffic
 	} else {
@@ -491,7 +502,7 @@ static bool IdleCheck(uint16_t rem_us) {
 			return (pgm_read_byte(BOOTLOADER_ADDRESS - TINYVECTOR_RESET_OFFSET + 1) == 0xff);
 		}
 	}
-	LED_MACRO(idlePolls.b[0]);
+	if (dev_addr) LED_MACRO(idlePolls.b[0]);
 	return true;
 }
 
@@ -501,6 +512,10 @@ void main(void) {
 	enterBootloader();
 
 	if (bootLoaderStartCondition() || (pgm_read_byte(BOOTLOADER_ADDRESS - TINYVECTOR_RESET_OFFSET + 1) == 0xff)) {
+		LED_INIT();
+
+		shutdownUSB();
+
 		initUSB(
 			#if EXPORT_USB
 				usbFunctionSetup,
@@ -517,8 +532,6 @@ void main(void) {
 			#endif
 		);
 
-		LED_INIT();
-
 		if (AUTO_EXIT_NO_USB_MS > 0) {
 			idlePolls.b[1] = ((AUTO_EXIT_MS-AUTO_EXIT_NO_USB_MS)/5)>>8;
 		} else {
@@ -530,9 +543,9 @@ void main(void) {
 
 		loopUSB(CommandHandling, IdleCheck);
 
-		LED_EXIT();
-
 		shutdownUSB();
+
+		LED_EXIT();
 	}
 
 	leaveBootloader();

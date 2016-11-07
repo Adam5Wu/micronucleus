@@ -32,7 +32,7 @@ documentation of the entire driver.
 /* raw USB registers / interface to assembler code: */
 #ifndef MNHACK_INT_FREE
 	uchar usbRxBuf[2*USB_BUFSIZE];	/* double raw RX buffer: PID, 8 bytes data, 2 bytes CRC */
-	uchar	usbInputBufOffset;				/* offset in usbRxBuf used for low level receiving */
+	uchar	usbInputBufOffset;	/* offset in usbRxBuf used for low level receiving */
 #else
 	uchar usbRxBuf[USB_BUFSIZE];	/* raw RX buffer: PID, 8 bytes data, 2 bytes CRC */
 #endif
@@ -370,7 +370,7 @@ bool _usbInterruptIsReady3()
  */
 static inline usbMsgLen_t usbDriverDescriptor(usbRequest_t *rq)
 {
-#if !EXPORT_USB		
+#if !EXPORT_USB
 usbMsgLen_t len = 0;
 uchar			flags = USB_FLG_MSGPTR_IS_ROM;
 
@@ -503,8 +503,8 @@ usbRequest_t *rq = (usbRequest_t *)data;
 #if USB_CFG_IMPLEMENT_FN_WRITEOUT
 		if(usbRxToken < 0x10){	/* OUT to endpoint != 0: endpoint number in usbRxToken */
 			USBCALL(usbFunctionWriteOut(data, len));
-			return;
-		}
+			//return;
+		}else
 #endif
 		if(usbRxToken == (uchar)USBPID_SETUP){
 				if(len != 8)		/* Setup size must be always 8 bytes. Ignore otherwise. */
@@ -542,14 +542,16 @@ usbRequest_t *rq = (usbRequest_t *)data;
 				usbMsgLen = replyLen;
 		}else{	/* usbRxToken must be USBPID_OUT, which means data phase of setup (control-out) */
 #if USB_CFG_IMPLEMENT_FN_WRITE
-				if(usbMsgFlags & USB_FLG_USE_USER_RW){
+				//if(usbMsgFlags & USB_FLG_USE_USER_RW){
 						uchar rval = USBCALL(usbFunctionWrite(data, len));
 						if(rval == 0xff){	/* an error occurred */
 								usbTxLen = USBPID_STALL;
 						}else if(rval != 0){		/* This was the final package */
 								usbMsgLen = 0;	/* answer with a zero-sized data packet */
 						}
-				}
+				//}
+#else
+			usbTxLen = USBPID_STALL;
 #endif
 		}
 }
