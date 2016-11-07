@@ -11,16 +11,16 @@ are not used in the bootloader, but potentially useful in user programs.
 Bootloader size (for attiny85):
 - No interrupt endpoint: 1894 bytes
 - With interrupt endpoint 1: 2048 bytes
-- With interrupt endpoint 1 (+halt support): 2128 bytes
+- With interrupt endpoint 1 (+halt support): 2128 bytes (default configuration)
 - With interrupt endpoint 1 (+halt support, usbFunctionWrite, usbFunctionRead): 2254 bytes
  
 # How to examples
 A modified Digistump DigiMouse library and Arduino project is included in the [examples direcotry](examples/DigisparkMouseLite).
 
 The original project generates a 4,332 byte binary;
-while the "lite" version which uses bootloader exported USB function generates 2,118 byte binary.
+while the "lite" version which uses bootloader exported USB function generates 2,220 byte binary.
 The saving is over 2KB.
-- If PRNG functions (random, etc.) is removed, the binary is further reduced to 1,294 bytes
+- If PRNG functions (random, etc.) is removed, the binary is further reduced to 1,400 bytes
   - This means bootloader + the mouse program together fit even MCU with 4KB of flash
 
 # Caveats
@@ -38,7 +38,7 @@ Notably:
   read [author's blog](https://cpldcpu.wordpress.com/2014/03/02/interrupt-free-v-usb/) for details.
   - Probably the most notable side-effect is, you cannot use millis() to get time (because it leverages a timer
   interrupt to track time). This is solvable because the interrupt-free USB polling mechanism tracks
-  (approximated) time on the order of micro-seconds, and I have exposed the information to the user program.
+  (approximated) time on the order of micro-seconds, and I have exposed this information to the user program.
   See [code example](examples/DigisparkMouseLite) for details.
 * Callback workflow must be used, instead of active probe
   - Due to the disable of interrupt, USB data lines have to be constantly monitored. So instead of letting user program
