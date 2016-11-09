@@ -236,27 +236,22 @@ bool communicate(uint16_t rem_us, uchar dev_addr) {
 		clock_ms+= whole_ms;
 		us_buffer %= 1000;
 
-		// if idle report interval is up
-		if (idle_ms > idle_rate*4) { // in unit of 4ms
-			must_report = 1;
-		}
+		// if idle report interval is up (in unit of 4ms)
+		must_report = idle_rate && (idle_ms >= idle_rate*4);
 	}
 	if (!_checkpoint(dev_addr)) return false;
 
 	// if the report has changed, try force an update
-	if (!must_report && memcmp(last_built_report, last_sent_report, REPORT_SIZE)) {
-		must_report = 1;
-	}
+	if (!must_report)
+		must_report = memcmp(last_built_report, last_sent_report, REPORT_SIZE);
 
 	// if we want to send a report, signal the host computer to ask us for it with a usb 'interrupt'
-	if (must_report) {
+	if (must_report && dev_addr && _usbInterruptIsReady()) {
 		idle_ms = 0;
-		if (dev_addr && _usbInterruptIsReady()) {
-			must_report = 0;
-			buildReport(reportBuffer); // put data into reportBuffer
-			clearMove(); // clear deltas
-			_usbSetInterrupt(reportBuffer, REPORT_SIZE);
-		}
+		must_report = false;
+		buildReport(reportBuffer); // put data into reportBuffer
+		clearMove(); // clear deltas
+		_usbSetInterrupt(reportBuffer, REPORT_SIZE);
 	}
 	return true;
 }
