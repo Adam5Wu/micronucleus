@@ -1,7 +1,8 @@
 ﻿/*
- * Project: Micronucleus -	v2.3
+ * Project: Micronucleus -	v2.32
  *
- * Micronucleus V2.3						(c) 2016 Tim Bo"scke - cpldcpu@gmail.com
+ * Micronucleus V2.32						(c) 2016 Zhenyu Wu - Adam_5Wu@hotmail.com
+ *															(c) 2016 Tim Bo"scke - cpldcpu@gmail.com
  *															(c) 2014 Shay Green
  * Original Micronucleus				(c) 2012 Jenna Fox
  *
@@ -12,7 +13,7 @@
  */
 
 #define MICRONUCLEUS_VERSION_MAJOR 2
-#define MICRONUCLEUS_VERSION_MINOR 31
+#define MICRONUCLEUS_VERSION_MINOR 32
 
 #include <avr/io.h>
 #include <avr/pgmspace.h>
