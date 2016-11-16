@@ -154,7 +154,7 @@ static inline void writeWordToPageBuffer(uint16_t data) {
 	// far jmp
 	if (currentAddress.w == RESET_VECTOR_OFFSET * 2) {
 		data = 0x940c;
-	} else if (currentAddress.w == (RESET_VECTOR_OFFSET +1) * 2) {
+	} else if (currentAddress.w == (RESET_VECTOR_OFFSET+1) * 2) {
 		data = (BOOTLOADER_ADDRESS/2);
 	}
 	#endif
@@ -549,7 +549,12 @@ void main(void) {
 	}
 
 	leaveBootloader();
-	asm volatile ("rjmp __vectors - 4"); // jump to application reset vector at end of flash
+	
+#define STRINGIZE(s)	#s
+#define REXPAND(s)	asm volatile ("rjmp __vectors - " STRINGIZE(s))
+	REXPAND(TINYVECTOR_RESET_OFFSET); // Jump to application reset vector at end of flash
+#undef FEXPAND
+#undef STRINGIZE
 }
 /* ------------------------------------------------------------------------ */
 
@@ -557,17 +562,14 @@ __attribute__((naked, section(".exports"))) void __exports(void) {
 #if EXPORT_USB
 	asm volatile(
 #if USB_CFG_HAVE_INTRIN_ENDPOINT && !USB_CFG_SUPPRESS_INTR_CODE
-#if USB_CFG_HAVE_INTRIN_ENDPOINT3
-		" rjmp _usbInterruptIsReady3 \n\t"
-		" rjmp usbSetInterrupt3 \n\t"
+		" rjmp _usbInterruptIsReady		\n"
+		" rjmp _usbSetInterrupt				\n"
 #endif
-		" rjmp _usbInterruptIsReady \n\t"
-		" rjmp usbSetInterrupt \n\t"
-#endif
-		" rjmp usbMsgData			 \n\t"
-		" rjmp loopUSB				 \n\t"
-		" rjmp shutdownUSB		 \n\t"
-		" rjmp initUSB				 \n\t"
+		" rjmp _usbStall							\n"
+		" rjmp usbMsgData							\n"
+		" rjmp loopUSB								\n"
+		" rjmp shutdownUSB						\n"
+		" rjmp initUSB								\n"
 	);
 #endif
 }

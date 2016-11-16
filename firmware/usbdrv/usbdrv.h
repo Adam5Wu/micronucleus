@@ -244,27 +244,21 @@ USB_PUBLIC usbMsgLen_t usbFunctionDescriptor(struct usbRequest *rq);
  * data. See the documentation of usbFunctionSetup() above for more info.
  */
 #if USB_CFG_HAVE_INTRIN_ENDPOINT
-#if !EXPORT_USB
-USB_PUBLIC
-#endif
-void usbSetInterrupt(uchar *data, uchar len);
+#define usbSetInterrupt(data,len)		usbGenericSetInterrupt(data,len,&usbTxStatus1)
 /* This function sets the message which will be sent during the next interrupt
  * IN transfer. The message is copied to an internal buffer and must not exceed
  * a length of 8 bytes. The message may be 0 bytes long just to indicate the
  * interrupt status to the host.
  * If you need to transfer more bytes, use a control read after the interrupt.
  */
-#define usbInterruptIsReady()	(usbTxLen1 & 0x10)
+#define usbInterruptIsReady()				(usbTxLen1 & 0x10)
 /* This macro indicates whether the last interrupt message has already been
  * sent. If you set a new interrupt message before the old was sent, the
  * message already buffered will be lost.
  */
 #if USB_CFG_HAVE_INTRIN_ENDPOINT3
-#if !EXPORT_USB
-	USB_PUBLIC
-#endif
-void usbSetInterrupt3(uchar *data, uchar len);
-#define usbInterruptIsReady3()	(usbTxLen3 & 0x10)
+#define usbSetInterrupt3(data,len)	usbGenericSetInterrupt(data,len,&usbTxStatus3)
+#define usbInterruptIsReady3()			(usbTxLen3 & 0x10)
 /* Same as above for endpoint 3 */
 #endif
 #endif /* USB_CFG_HAVE_INTRIN_ENDPOINT */

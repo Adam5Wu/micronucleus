@@ -50,6 +50,3 @@
 	.section .init3, "ax", @progbits
 	.weak	__init3
 __init3:
-
-	.section .init9, "ax", @progbits
-	XJMP	main

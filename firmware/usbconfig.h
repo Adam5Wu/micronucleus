@@ -83,7 +83,7 @@
  * communicates power requirements in units of 2 mA.]
  */
 #if EXPORT_USB
-	#define USB_CFG_IMPLEMENT_FN_WRITE      0
+	#define USB_CFG_IMPLEMENT_FN_WRITE      1
 	/* Set this to 1 if you want usbFunctionWrite() to be called for control-out
 	 * transfers. Set it to 0 if you don't need it and want to save a couple of
 	 * bytes.

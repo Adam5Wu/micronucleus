@@ -237,10 +237,25 @@ static inline void	usbResetStall(void)
 #endif
 }
 
+#if EXPORT_USB
+void _usbStall(uchar endpoint)
+{
+	switch(endpoint) {
+		case 0: usbTxLen = USBPID_STALL; break;
+#if USB_CFG_HAVE_INTRIN_ENDPOINT && !USB_CFG_SUPPRESS_INTR_CODE
+		case 1: usbTxLen1 = USBPID_STALL; break;
+#if USB_CFG_HAVE_INTRIN_ENDPOINT3
+		case 3: usbTxLen3 = USBPID_STALL; break;
+#endif
+#endif
+	}
+}
+#endif
+
 /* ------------------------------------------------------------------------- */
 
 #if USB_CFG_HAVE_INTRIN_ENDPOINT && !USB_CFG_SUPPRESS_INTR_CODE
-static void usbGenericSetInterrupt(uchar *data, uchar len, usbTxStatus_t *txStatus)
+static void usbGenericSetInterrupt(uchar const *data, uchar len, usbTxStatus_t *txStatus)
 {
 uchar	*p;
 char		i;
@@ -264,37 +279,29 @@ char		i;
 		DBG2(0x21 + (((int)txStatus >> 3) & 3), txStatus->buffer, len + 3);
 }
 
-#if !EXPORT_USB
-	USB_PUBLIC
-#endif
-void usbSetInterrupt(uchar *data, uchar len)
-{
-	usbGenericSetInterrupt(data, len, &usbTxStatus1);
-}
-
 #if EXPORT_USB
-bool _usbInterruptIsReady()
+void _usbSetInterrupt(uchar endpoint, void const *data, uchar len)
 {
-	return usbInterruptIsReady();
-}
-#endif
-
+	switch(endpoint) {
+		case 1: usbGenericSetInterrupt((uchar const*)data, len, &usbTxStatus1); break;
 #if USB_CFG_HAVE_INTRIN_ENDPOINT3
-#if !EXPORT_USB
-	USB_PUBLIC
+		case 3: usbGenericSetInterrupt((uchar const*)data, len, &usbTxStatus3); break;
 #endif
-void usbSetInterrupt3(uchar *data, uchar len)
-{
-	usbGenericSetInterrupt(data, len, &usbTxStatus3);
+	}
 }
 
-#if EXPORT_USB
-bool _usbInterruptIsReady3()
+bool _usbInterruptIsReady(uchar endpoint)
 {
-	return usbInterruptIsReady3();
+	switch(endpoint) {
+		case 1: return usbInterruptIsReady();
+#if USB_CFG_HAVE_INTRIN_ENDPOINT3
+		case 3: return usbInterruptIsReady3();
+#endif
+		default: return false;
+	}
 }
 #endif
-#endif
+
 #endif
 
 /* ------------------ utilities for code following below ------------------- */
@@ -542,14 +549,14 @@ usbRequest_t *rq = (usbRequest_t *)data;
 				usbMsgLen = replyLen;
 		}else{	/* usbRxToken must be USBPID_OUT, which means data phase of setup (control-out) */
 #if USB_CFG_IMPLEMENT_FN_WRITE
-				//if(usbMsgFlags & USB_FLG_USE_USER_RW){
+				if(usbMsgFlags & USB_FLG_USE_USER_RW){
 						uchar rval = USBCALL(usbFunctionWrite(data, len));
 						if(rval == 0xff){	/* an error occurred */
 								usbTxLen = USBPID_STALL;
 						}else if(rval != 0){		/* This was the final package */
 								usbMsgLen = 0;	/* answer with a zero-sized data packet */
 						}
-				//}
+				}
 #else
 			usbTxLen = USBPID_STALL;
 #endif
