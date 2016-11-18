@@ -27,7 +27,7 @@ The saving is over 2KB.
 
 # Caveats
 ## Bootloader compatibility
-- This bootloader (with USB export) behaves exactly like the original, so completely compatible functionality-wise
+- This bootloader (with USB export) behaves exactly like the original, so completely compatible functionality-wise (except for slightly reduced user programe space)
   - User programs that include their own V-USB will still work as expected.
   
 ## Non-standard VUSB implementation
@@ -44,8 +44,8 @@ Notably:
   See [code example](examples/DigisparkMouseLite) for details.
 * Callback workflow must be used, instead of active probe
   - Due to the disable of interrupt, USB data lines have to be constantly monitored. So instead of letting user program
-  to perform adhoc checking, the main loop must perform the USB polling, and user program can only be executed as
-  side-service during the gap of polling
+  to perform adhoc checking, the main loop must perform the USB polling, and any additional functions can only be executed as
+  side-workload during the gap of polling.
   - The benefit of doing so is supposedly improved throughput, according to the
   [author's blog](https://cpldcpu.wordpress.com/2014/03/02/interrupt-free-v-usb/)
   - Again see [code example](examples/DigisparkMouseLite) for detailed usages.
