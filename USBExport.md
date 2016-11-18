@@ -9,20 +9,20 @@ The new bootloader is slightly larger in size, and the inflation is mostly due t
 are not used in the bootloader, but potentially useful in user programs.
 
 Bootloader size (for attiny85):
-- No interrupt endpoint: 1908 bytes
-- With interrupt endpoint 1: 2102 bytes
-- With interrupt endpoint 1 (+halt support): 2182 bytes
-- With interrupt endpoint 1 (+halt support, usbFunctionWrite): 2272 bytes (default configuration)
-- With interrupt endpoint 1 (+halt support, long transfer, usbFunctionWrite): 2312 bytes
-- With interrupt endpoint 1 (+halt support, long transfer, usbFunctionRead/Write/WriteOut): 2440 bytes
+- No interrupt endpoint: 1906 bytes
+- With interrupt endpoint 1: 2088 bytes
+- With interrupt endpoint 1 (+halt support): 2164 bytes
+- With interrupt endpoint 1 (+halt support, usbFunctionWrite): 2252 bytes (default configuration)
+- With interrupt endpoint 1 (+halt support, long transfer, usbFunctionWrite): 2300 bytes
+- With interrupt endpoint 1 (+halt support, long transfer, usbFunctionWrite/WriteOut): 2338 bytes
  
 # How to examples
 A modified Digistump DigiMouse library and Arduino project is included in the [examples direcotry](examples/DigisparkMouseLite).
 
 The original project generates a 4,332 byte binary;
-while the "lite" version which uses bootloader exported USB function generates 2,246 byte binary.
+while the "lite" version which uses bootloader exported USB function generates 2,198 byte binary.
 The saving is over 2KB.
-- If PRNG functions (random, etc.) is removed, the binary is further reduced to 1,426 bytes
+- If PRNG functions (random, etc.) is removed, the binary is further reduced to 1,378 bytes
   - This means bootloader + the mouse program together fit even MCU with 4KB of flash
 
 # Caveats

@@ -34,20 +34,21 @@ usbMsgLen_t (*f_usbFunctionSetup)(uchar data[8]),
 usbMsgLen_t (*f_usbFunctionDescriptor)(struct usbRequest *rq)
 );
 
-extern "C" void _shutdownUSB(void);
-
 // Compensate some process delays
-#define USB_POLLTIME_US (5000+1080)
+#define USB_POLLTIME_US 5420
 
 extern "C" void _loopUSB(
 	bool (*f_beforePoll)(uint16_t rem_us, uchar dev_addr),
 	bool (*f_afterPoll)(uint16_t rem_us, uchar dev_addr)
 );
 
-extern "C" void _usbMsgData(void const *data, uchar flags);
+//extern "C" void _usbMsgData(void const *data, uchar flags);
+#define _usbMsgData(data, flags) \
+usbMsgPtr = (usbMsgPtr_t)data;	\
+usbMsgFlags = flags;						\
 
 extern "C" void _usbStall(uchar endpoint);
-	
+
 #if USB_CFG_HAVE_INTRIN_ENDPOINT && !USB_CFG_SUPPRESS_INTR_CODE
 	extern "C" void _usbSetInterrupt(uchar endpoint, void const *data, uchar len);
 	extern "C" bool _usbInterruptIsReady(uchar endpoint);
@@ -69,7 +70,7 @@ struct mouseReport {
 #define REPORT_SIZE sizeof(mouseReport)
 
 static mouseReport report_buffer, report_buffer_last;
-	
+
 // report frequency set to default of 50hz
 #define DIGIMOUSE_DEFAULT_REPORT_INTERVAL 20
 static uchar idle_rate; // in units of 4ms
@@ -119,7 +120,7 @@ void clearMove(mouseReport &report) {
 	report.deltaY = 0;
 	report.deltaS = 0;
 }
-	
+
 usbMsgLen_t usbFunctionSetup(uint8_t data[8]) {
 	usbRequest_t *rq = (usbRequest_t *)data;
 	if ((rq->bmRequestType & USBRQ_TYPE_MASK) == USBRQ_TYPE_CLASS) {		/* class request type */
@@ -215,21 +216,20 @@ usbMsgLen_t usbFunctionDescriptor(struct usbRequest *rq) {
 	return 0;
 }
 
-bool (*_checkpoint)(uchar dev_addr);
-
 bool communicate(uint16_t rem_us, uchar dev_addr) {
 	us_buffer += USB_POLLTIME_US - rem_us;
-	uint8_t whole_ms = us_buffer / 1000;
+	//uint8_t whole_ms = us_buffer / 1000;
+	uint8_t whole_ms = us_buffer / 1024;
 
 	if (whole_ms) {
 		idle_ms+= whole_ms;
 		clock_ms+= whole_ms;
-		us_buffer %= 1000;
+		//us_buffer %= 1000;
+		us_buffer &= 1023;
 
 		// if idle report interval is up (in unit of 4ms)
 		must_report = idle_rate && (idle_ms >= idle_rate*4);
 	}
-	if (!_checkpoint(dev_addr)) return false;
 
 	// if the report has changed, try force an update
 	if (!must_report)
@@ -241,7 +241,7 @@ bool communicate(uint16_t rem_us, uchar dev_addr) {
 		idle_ms = 0;
 		must_report = false;
 		_usbSetInterrupt(1, &report_buffer, REPORT_SIZE);
-		
+
 		// because we send deltas in movement, so when we send them, we clear them
 		clearMove(report_buffer);
 		report_buffer_last.buttons = report_buffer.buttons;
@@ -249,13 +249,12 @@ bool communicate(uint16_t rem_us, uchar dev_addr) {
 	return true;
 }
 
-bool nop(uint16_t rem_us, uchar dev_addr) {
-	return true;
-}
-
 } // extern "C"
 
-void DigiMouse_main(bool (*f_checkpoint)(uchar dev_addr)) {
+bool checkpoint(uint16_t rem_us, uchar dev_addr);
+
+__attribute__((__noreturn__))
+void DigiMouse_main() {
 	_initUSB(
 		usbFunctionSetup,
 		#if USB_CFG_IMPLEMENT_FN_WRITE
@@ -278,11 +277,7 @@ void DigiMouse_main(bool (*f_checkpoint)(uchar dev_addr)) {
 	report_buffer_last.buttons = 0;
 	must_report = false;
 
-	_checkpoint = f_checkpoint;
-	_loopUSB(communicate, nop);
-
-	// Should not reach
-	//_shutdownUSB();
+	_loopUSB(communicate, checkpoint);
 }
 
 void DigiMouse_moveX(char deltaX)	{
@@ -343,13 +338,11 @@ void DigiMouse_setValues(uchar values[]) {
 
 void __imports(void) {
 	FEXPAND(_initUSB,FLASHEND-1);
-	FEXPAND(_shutdownUSB,FLASHEND-3);
-	FEXPAND(_loopUSB,FLASHEND-5);
-	FEXPAND(_usbMsgData,FLASHEND-7);
-	FEXPAND(_usbStall,FLASHEND-9);
+	FEXPAND(_loopUSB,FLASHEND-3);
+	FEXPAND(_usbStall,FLASHEND-5);
 #if USB_CFG_HAVE_INTRIN_ENDPOINT && !USB_CFG_SUPPRESS_INTR_CODE
-	FEXPAND(_usbSetInterrupt,FLASHEND-11);
-	FEXPAND(_usbInterruptIsReady,FLASHEND-13);
+	FEXPAND(_usbSetInterrupt,FLASHEND-7);
+	FEXPAND(_usbInterruptIsReady,FLASHEND-9);
 #endif
 }
 

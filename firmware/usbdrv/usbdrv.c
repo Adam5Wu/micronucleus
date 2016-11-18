@@ -62,13 +62,15 @@ volatile uchar	usbSofCount;		/* incremented by assembler module every SOF */
 #endif
 
 /* USB status registers / not shared with asm code */
-usbMsgPtr_t usbMsgPtr;			/* data to transmit next -- ROM or RAM address */
 #ifdef MNHACK_NO_DATASECTION
-	static usbMsgLen_t	usbMsgLen; /* remaining number of bytes */
+	usbMsgLen_t usbMsgLen;											/* remaining number of bytes */
 #else
-	static usbMsgLen_t	usbMsgLen = USB_NO_MSG; /* remaining number of bytes */
+	static usbMsgLen_t usbMsgLen = USB_NO_MSG;	/* remaining number of bytes */
 #endif
-static uchar usbMsgFlags;		/* flag values see below */
+register usbMsgPtr_t usbMsgPtr	asm("r2");		// r2/r3: data to transmit next -- ROM or RAM address
+//usbMsgPtr_t usbMsgPtr;												/* data to transmit next -- ROM or RAM address */
+register uchar usbMsgFlags			asm("r4");		// r4: flag values see below
+//uchar usbMsgFlags;														/* flag values see below */
 
 #define USB_FLG_MSGPTR_IS_ROM	(1<<6)
 #define USB_FLG_USE_USER_RW		(1<<7)
@@ -722,9 +724,6 @@ USB_PUBLIC void usbInit(
 	usbTxLen = USBPID_NAK;
 	usbMsgLen = USB_NO_MSG;
 #endif
-
-//	usbNewDeviceAddr = 0;
-//	usbDeviceAddr = 0;
 
 #if USB_INTR_CFG_SET != 0
 	USB_INTR_CFG |= USB_INTR_CFG_SET;

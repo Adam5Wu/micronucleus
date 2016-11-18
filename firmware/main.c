@@ -1,7 +1,7 @@
 ﻿/*
  * Project: Micronucleus -	v2.32
  *
- * Micronucleus V2.32						(c) 2016 Zhenyu Wu - Adam_5Wu@hotmail.com
+ * Micronucleus V2.33						(c) 2016 Zhenyu Wu - Adam_5Wu@hotmail.com
  *															(c) 2016 Tim Bo"scke - cpldcpu@gmail.com
  *															(c) 2014 Shay Green
  * Original Micronucleus				(c) 2012 Jenna Fox
@@ -21,7 +21,7 @@
 #include <avr/boot.h>
 #include <util/delay.h>
 
-#define bool _Bool
+#define bool uint8_t
 #define true 1
 #define false 0
 
@@ -67,17 +67,21 @@ PROGMEM const uint8_t configurationReply[6] = {
 	SIGNATURE_2
 };
 
+#if OSCCAL_RESTORE_DEFAULT
+	register uint8_t osccal_default	asm("r5");				// r7: default osc
+#endif
+
 typedef union {
 	uint16_t w;
 	uint8_t b[2];
 } uint16_union_t;
 
-#if OSCCAL_RESTORE_DEFAULT
-	register uint8_t osccal_default	asm("r2");
+register uint16_union_t currentAddress	asm("r6");	// r6/r7: current progmem address, used for erasing and writing
+#if USB_CFG_IMPLEMENT_FN_WRITE && USB_CFG_IMPLEMENT_FN_READ && USB_CFG_IMPLEMENT_FN_WRITEOUT
+register uint16_union_t idlePolls				asm("r8");	// r8/r9: idle counter
+#else
+register uint16_union_t idlePolls				asm("r16");	// r16/r17: idle counter
 #endif
-
-register uint16_union_t currentAddress	asm("r4");	// r4/r5 current progmem address, used for erasing and writing
-register uint16_union_t idlePolls				asm("r6");	// r6/r7 idlecounter
 
 // command system schedules functions to run in the main loop
 enum {
@@ -89,11 +93,7 @@ enum {
 	cmd_exit = 4,
 	cmd_write_page = 64	// internal commands start at 64
 };
-register uint8_t command asm("r3");	// bind command to r3
-
-// Definition of sei and cli without memory barrier keyword to prevent reloading of memory variables
-#define sei() asm volatile("sei")
-#define cli() asm volatile("cli")
+register uint8_t command asm("r10");								// r10: command
 
 #define nop() asm volatile("nop")
 #define wdr() asm volatile("wdr")
@@ -171,14 +171,9 @@ static inline void writeWordToPageBuffer(uint16_t data) {
 	currentAddress.w += 2;
 }
 
-
-#if !EXPORT_USB
-static inline
-#endif
-void usbMsgData(void const *data, uchar flags) {
-	usbMsgPtr = (usbMsgPtr_t)data;
-	usbMsgFlags = flags;
-}
+#define usbMsgData(data, flags) \
+usbMsgPtr = (usbMsgPtr_t)data;	\
+usbMsgFlags = flags;						\
 
 /* ------------------------------------------------------------------------ */
 static usbMsgLen_t usbFunctionSetup(uint8_t data[8]) {
@@ -322,22 +317,13 @@ void initUSB (
 	usbDeviceConnect();
 }
 
-__attribute__((noinline))
-void _delay_100ms(void) {
-	_delay_ms(100);
-}
-
 void shutdownUSB (void) {
 	usbDeviceDisconnect();
 
 	USB_INTR_ENABLE = 0;
 	USB_INTR_CFG = 0;			 /* also reset config bits */
-	
-	LED_MACRO(0x00);
-	_delay_100ms();
-	_delay_100ms();
-	LED_MACRO(0xFF);
-	_delay_100ms();
+
+	_delay_ms(300);
 }
 
 static inline void initHardware (void)
@@ -354,7 +340,9 @@ static inline void initHardware (void)
 	WDTCR = 1<<WDP2 | 1<<WDP1 | 1<<WDP0;
 #endif
 
+	LED_MACRO(0x00);
 	shutdownUSB();
+	LED_MACRO(0xFF);
 }
 
 static inline void usbPollLite(void) {
@@ -376,33 +364,48 @@ static inline void usbPollLite(void) {
 	}
 }
 
-// 15 clockcycles per loop, 10ms timeout
-#define USB_RESET_TIMEOUT (uint16_t)(F_CPU/(1000.0f*15.0f/10.0f))
-// 15 clockcycles per loop, 5ms timeout
-#define USB_INT_TIMEOUT (uint16_t)(F_CPU/(1000.0f*15.0f/5.0f))
-#define USB_POLLREM_US(CTR) (CTR/(uint16_t)(F_CPU/1.0e6f/15.0f))
+#define POOL_CYCLE						24
+
+#define USB_RESET_MS					2.5
+#define USB_RESET_TIMEOUT			(uint16_t)(F_CPU/(1.0e3*POOL_CYCLE/USB_RESET_MS))
+
+#define USB_POLL_MS						5.0
+#define USB_POLL_TIMEOUT			(uint16_t)(F_CPU/(1.0e3*POOL_CYCLE/USB_POLL_MS))
+
+#define USB_POLL_REMUS(CTR)		(CTR*(uint16_t)(1.6e7*POOL_CYCLE/F_CPU)/16)
+
 // 5 clockcycles per loop, 8.8µs timeout
-#define USB_RESYNC_IDLE (uint8_t)(8.8f*(F_CPU/1.0e6f/5.0f)+0.5)
+#define USB_RESYNC_CYCLE			5
+#define USB_RESYNC_TIMEOUT		8.8f
+#define USB_RESYNC_IDLE				(uint8_t)(USB_RESYNC_TIMEOUT*(F_CPU/1.0e6/USB_RESYNC_CYCLE)+0.5)
 
 //void USB_INTR_VECTOR(void);
 void loopUSB(
 	bool (*f_beforePoll)(uint16_t rem_us, uchar dev_addr),
 	bool (*f_afterPoll)(uint16_t rem_us, uchar dev_addr)
 ) {
-	uint16_t	resetctr = USB_RESET_TIMEOUT;
+	//uint16_t resetctr = 0;
+	register uint16_t resetctr asm("r24") = 0;
 	do {
-		uint16_t fastctr = USB_INT_TIMEOUT;
+		//uint16_t fastctr = USB_POLL_TIMEOUT;
+		register uint16_t fastctr asm("r26") = USB_POLL_TIMEOUT;
 
 		do {
 			if ((USBIN & USBMASK) != 0) resetctr = USB_RESET_TIMEOUT;
 
-			if (!--resetctr) { // reset encountered
-				usbNewDeviceAddr = 0;	 // bits from the reset handling of usbpoll()
+			if (usbDeviceAddr && !--resetctr) { // reset encountered
+
+				// bits from the reset handling of usbpoll()
+				usbNewDeviceAddr = 0;
 				usbDeviceAddr = 0;
 				usbResetStall();
-				#if (OSCCAL_HAVE_XTAL == 0)
-					calibrateOscillatorASM();
-				#endif
+
+#if AUTO_EXIT_NO_USB_MS
+				idlePolls.w = max(idlePolls.w, (AUTO_EXIT_MS-AUTO_EXIT_NO_USB_MS)/5);
+#endif
+#if !OSCCAL_HAVE_XTAL
+				calibrateOscillatorASM();
+#endif
 			}
 
 			if (USB_INTR_PENDING & (1<<USB_INTR_PENDING_BIT)) {
@@ -414,7 +417,7 @@ void loopUSB(
 
 		wdr();
 
-		uint16_t rem_us = USB_POLLREM_US(fastctr);
+		uint16_t rem_us = USB_POLL_REMUS(fastctr);
 		if (!f_beforePoll(rem_us, usbDeviceAddr)) break;
 
 		usbPollLite();
@@ -440,6 +443,8 @@ void loopUSB(
 			USB_INTR_PENDING = 1<<USB_INTR_PENDING_BIT;
 		}
 	} while(1);
+
+	shutdownUSB();
 }
 
 /* ------------------------------------------------------------------------ */
@@ -448,18 +453,21 @@ static inline void enterBootloader(void) {
 	bootLoaderInit();
 
 	/* save default OSCCAL calibration	*/
-	#if OSCCAL_RESTORE_DEFAULT
-		osccal_default = OSCCAL;
-	#endif
+#if OSCCAL_RESTORE_DEFAULT
+	osccal_default = OSCCAL;
+#endif
 
-	#if OSCCAL_SAVE_CALIB
-		// adjust clock to previous calibration value, so bootloader starts with proper clock calibration
-		unsigned char stored_osc_calibration = pgm_read_byte(BOOTLOADER_ADDRESS - TINYVECTOR_OSCCAL_OFFSET);
-		if (stored_osc_calibration != 0xFF) {
-			OSCCAL = stored_osc_calibration;
-			nop();
-		}
-	#endif
+#if OSCCAL_SAVE_CALIB
+	// adjust clock to previous calibration value, so bootloader starts with proper clock calibration
+	unsigned char stored_osc_calibration = pgm_read_byte(BOOTLOADER_ADDRESS - TINYVECTOR_OSCCAL_OFFSET);
+	if (stored_osc_calibration != 0xFF) {
+		OSCCAL = stored_osc_calibration;
+		nop();
+	} else
+#endif
+#if !OSCCAL_HAVE_XTAL
+		calibrateOscillatorASM();
+#endif
 
 	initHardware();
 }
@@ -494,16 +502,18 @@ static bool CommandHandling(uint16_t rem_us, uchar dev_addr) {
 }
 
 static bool IdleCheck(uint16_t rem_us, uchar dev_addr) {
-	if (rem_us != 0) {
-		idlePolls.w = 0; // reset idle polls when we get usb traffic
-	} else {
-		idlePolls.w++;
-		// Try to execute program when bootloader times out
-		if (AUTO_EXIT_MS&&(idlePolls.w == (AUTO_EXIT_MS/5))) {
-			return (pgm_read_byte(BOOTLOADER_ADDRESS - TINYVECTOR_RESET_OFFSET + 1) == 0xff);
-		}
+		// reset idle polls when we get usb traffic
+	if (rem_us)
+		idlePolls.w = 0;
+
+	idlePolls.w++;
+	// Try to execute program when bootloader times out
+	if (AUTO_EXIT_MS && (idlePolls.w == (AUTO_EXIT_MS/5))) {
+		return (pgm_read_byte(BOOTLOADER_ADDRESS - TINYVECTOR_RESET_OFFSET + 1) == 0xff);
 	}
+
 	if (dev_addr) LED_MACRO(idlePolls.b[0]);
+
 	return true;
 }
 
@@ -516,6 +526,10 @@ void main(void) {
 		LED_INIT();
 
 		shutdownUSB();
+
+		idlePolls.w = AUTO_EXIT_NO_USB_MS? (AUTO_EXIT_MS-AUTO_EXIT_NO_USB_MS)/5 : 0;
+		command = cmd_local_nop;
+		currentAddress.w = 0;
 
 		initUSB(
 			#if EXPORT_USB
@@ -533,24 +547,13 @@ void main(void) {
 			#endif
 		);
 
-		if (AUTO_EXIT_NO_USB_MS > 0) {
-			idlePolls.b[1] = ((AUTO_EXIT_MS-AUTO_EXIT_NO_USB_MS)/5)>>8;
-		} else {
-			idlePolls.b[1] = 0;
-		}
-
-		command = cmd_local_nop;
-		currentAddress.w = 0;
-
 		loopUSB(CommandHandling, IdleCheck);
-
-		shutdownUSB();
 
 		LED_EXIT();
 	}
 
 	leaveBootloader();
-	
+
 #define STRINGIZE(s)	#s
 #define REXPAND(s)	asm volatile ("rjmp __vectors - " STRINGIZE(s))
 	REXPAND(TINYVECTOR_RESET_OFFSET); // Jump to application reset vector at end of flash
@@ -567,9 +570,7 @@ __attribute__((naked, section(".exports"))) void __exports(void) {
 		" rjmp _usbSetInterrupt				\n"
 #endif
 		" rjmp _usbStall							\n"
-		" rjmp usbMsgData							\n"
 		" rjmp loopUSB								\n"
-		" rjmp shutdownUSB						\n"
 		" rjmp initUSB								\n"
 	);
 #endif
