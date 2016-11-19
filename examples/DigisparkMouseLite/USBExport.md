@@ -33,6 +33,11 @@ Major changes are:
     - When there was no USB activity, callback happens at the deadline, rem_us=0;
     - When USB pipe is active, callback happens before the deadline, 0 <= rem_us <= 5000.
     
+    User programs usually should not worry about the above details, because the "lite"
+    implementation already tracks the time, and keep the milli-seconds since boot in the
+    "clock_ms" gloal variable. So simply replace all millis() with a load of "clock_ms",
+    and you are done.
+
   2. The DigiMouse_main() does not return (for as long as the USB device is not shutdown)
     To get control back periodically, the user program should implement checkpoint() function.
     - This function should return true if you wish to continue the function of USB device;
