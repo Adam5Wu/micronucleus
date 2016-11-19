@@ -62,7 +62,7 @@ inline void LEDoff() {
 #endif
 }
 
-bool checkpoint(uchar dev_addr) {
+bool checkpoint(uint16_t rem_us, uchar dev_addr) {
   if (dev_addr) {
     if (clock_ms >= endtime) {
       switch (mousemove) {
@@ -107,5 +107,5 @@ __attribute__((naked, section(".init9")))
 __attribute__((__noreturn__))
 int main() {
   setup();
-  DigiMouse_main(checkpoint);
+  DigiMouse_main();
 }
