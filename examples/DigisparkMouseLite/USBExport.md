@@ -39,7 +39,7 @@ Major changes are:
     
     User programs usually should not worry about the above details, because the "lite"
     implementation already tracks the time, and keep the milli-seconds since boot in the
-    "clock_ms" gloal variable. So simply replace all millis() with a load of "clock_ms",
+    "clock_ms" global variable. So simply replace all millis() with a load of "clock_ms",
     and you are done.
 
   2. The DigiMouse_main() does not return (for as long as the USB device is not shutdown).
