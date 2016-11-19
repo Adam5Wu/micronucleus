@@ -41,11 +41,11 @@ Notably:
   - Probably the most notable side-effect is, you cannot use millis() to get time (because it leverages a timer
   interrupt to track time). This is solvable because the interrupt-free USB polling mechanism tracks
   (approximated) time on the order of micro-seconds, and I have exposed this information to the user program.
-  See [code example](examples/DigisparkMouseLite) for details.
+  See [notes in the code example](examples/DigisparkMouseLite/USBExport.md) for details.
 * Callback workflow must be used, instead of active probe
   - Due to the disable of interrupt, USB data lines have to be constantly monitored. So instead of letting user program
   to perform adhoc checking, the main loop must perform the USB polling, and any additional functions can only be executed as
   side-workload during the gap of polling.
-  - The benefit of doing so is supposedly improved throughput, according to the
+  - The benefit of doing so is supposedly improved throughput compared to interrupt based V-USB, according to the
   [author's blog](https://cpldcpu.wordpress.com/2014/03/02/interrupt-free-v-usb/)
-  - Again see [code example](examples/DigisparkMouseLite) for detailed usages.
+  - Again see [notes in the code example](examples/DigisparkMouseLite/USBExport.md) for details.
