@@ -223,6 +223,13 @@ usbCrc16LoopTest:
     com     resCrcL
     com     resCrcH
     ret
+
+; extern unsigned usbCrc16Append(unsigned char *data, unsigned char len);
+usbCrc16Append:
+    rcall   usbCrc16
+    st      ptr+, resCrcL
+    st      ptr+, resCrcH
+    ret
     
 #else   // USB_USE_FAST_CRC 
 
@@ -238,7 +245,8 @@ usbCrc16LoopTest:
 ;   scratch r23
 ;   resCrc  r24+r25 / r16+r17
 ;   ptr     X / Z
-usbCrc16:
+usbCrc16Append:
+;usbCrc16:
     mov     ptrL, argPtrL
     mov     ptrH, argPtrH
     ldi     resCrcL, 0
@@ -264,17 +272,17 @@ usbCrcLoopEntry:
     subi    argLen, -1
     brcs    usbCrcByteLoop
 usbCrcReady:
-    ret
+;    ret
 ; Thanks to Reimar Doeffinger for optimizing this CRC routine!
 
-#endif // USB_USE_FAST_CRC 
-
 ; extern unsigned usbCrc16Append(unsigned char *data, unsigned char len);
-usbCrc16Append:
-    rcall   usbCrc16
+;usbCrc16Append:
+;    rcall   usbCrc16
     st      ptr+, resCrcL
     st      ptr+, resCrcH
     ret
+
+#endif // USB_USE_FAST_CRC 
 
 #undef argLen
 #undef argPtrL

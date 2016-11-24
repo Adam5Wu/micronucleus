@@ -101,13 +101,16 @@ foundK:                         ;[-16]
 ;   [---]                       ;[-15]
 #ifndef MNHACK_INT_FREE
     lds     YL, usbInputBufOffset;[-14]
-#else
-    clr     YL                   ;[-14]
-#endif
 ;   [---]                       ;[-13]
     clr     YH                  ;[-12]
     subi    YL, lo8(-(usbRxBuf));[-11] [rx loop init]
     sbci    YH, hi8(-(usbRxBuf));[-10] [rx loop init]
+#else
+		rjmp    .+0                 ;[-14][-13]
+		nop													;[-12]
+		ldi     YL, lo8((usbRxBuf)) ;[-11] [rx loop init]
+		ldi     YH, hi8((usbRxBuf)) ;[-10] [rx loop init]
+#endif
     push    shift               ;[-9]
 ;   [---]                       ;[-8]
     ldi     shift,0x40          ;[-7] set msb to "1" so processing bit7 can be detected

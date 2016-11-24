@@ -77,14 +77,16 @@ foundK:                         ;[-12]
     push    bitcnt              ;[-12]
 ;   [---]                       ;[-11]
 #ifndef MNHACK_INT_FREE
-    lds     YL, usbInputBufOffset;[-10]
-#else
-    clr     YL                   ;[-10]
-#endif
-;   [---]                       ;[-9]
+    lds     YL, usbInputBufOffset;[-10][-9]
     clr     YH                  ;[-8]
     subi    YL, lo8(-(usbRxBuf));[-7] [rx loop init]
     sbci    YH, hi8(-(usbRxBuf));[-6] [rx loop init]
+#else
+		rjmp    .+0                 ;[-10][-9]
+		nop													;[-8]
+		ldi     YL, lo8((usbRxBuf)) ;[-7] [rx loop init]
+		ldi     YH, hi8((usbRxBuf)) ;[-6] [rx loop init]
+#endif
     push    shift               ;[-5]
 ;   [---]                       ;[-4]
     ldi     bitcnt, 0x55        ;[-3] [rx loop init]

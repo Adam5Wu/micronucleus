@@ -357,11 +357,12 @@ static inline void usbPollLite(void) {
 #endif
 			usbRxLen = 0;			 /* mark rx buffer as available */
 	}
-	if(usbTxLen & 0x10){		/* transmit system idle */
+	// transmit system is always idle in sequential mode
+	//if(usbTxLen & 0x10) {		/* transmit system idle */
 		if(usbMsgLen != USB_NO_MSG){		/* transmit data pending? */
 			usbBuildTxBlock();
 		}
-	}
+	//}
 }
 
 #define POOL_CYCLE						24

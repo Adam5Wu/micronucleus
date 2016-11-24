@@ -143,13 +143,15 @@ foundK:
     push    YH                  ;[2]
 #ifndef MNHACK_INT_FREE
     lds     YL, usbInputBufOffset;[4]
+    clr     YH                   ;[6]
+    subi    YL, lo8(-(usbRxBuf)) ;[7]
+    sbci    YH, hi8(-(usbRxBuf)) ;[8]
 #else
-    clr     YL                   ;[3]
-;		nop                          ;[4]
+		rjmp    .+0                 ;[4]
+		nop													;[6]
+		ldi     YL, lo8((usbRxBuf)) ;[7]
+		ldi     YH, hi8((usbRxBuf)) ;[8]
 #endif
-    clr     YH                  ;[6]
-    subi    YL, lo8(-(usbRxBuf));[7]
-    sbci    YH, hi8(-(usbRxBuf));[8]
 
     sbis    USBIN, USBMINUS     ;[9] we want two bits K [we want to sample at 8 + 4 - 1.5 = 10.5]
     rjmp    haveTwoBitsK        ;[10]

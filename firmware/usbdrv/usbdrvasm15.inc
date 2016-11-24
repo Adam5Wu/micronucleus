@@ -83,16 +83,18 @@ waitForK:			 ;-
 ;	bit after the instruction
 ;------------------------------------------------------------------------------
 foundK:                          ;- [02]
+    push    YH                   ;2 [03+04]
 #ifndef MNHACK_INT_FREE
-    lds     YL, usbInputBufOffset;2 [03+04]	tx loop
-#else
-    clr     YL                   ;1 [03]
-;		nop                          ;1 [04]
-#endif
-    push    YH                   ;2 [05+06]
+    lds     YL, usbInputBufOffset;2 [05+06]	tx loop
     clr     YH                   ;1 [07]
     subi    YL, lo8(-(usbRxBuf)) ;1 [08] 	[rx loop init]
     sbci    YH, hi8(-(usbRxBuf)) ;1 [09] 	[rx loop init]
+#else
+		rjmp    .+0                  ;2 [05+06]	tx loop
+		nop													 ;1 [07]
+		ldi     YL, lo8((usbRxBuf))  ;1 [08] 	[rx loop init]
+		ldi     YH, hi8((usbRxBuf))  ;1 [09] 	[rx loop init]
+#endif
     push    shift                ;2 [10+11]
     ser	    shift		 ;1 [12]
     sbis    USBIN, USBMINUS      ;1 [-1] [13] <--sample:we want two bits K (sample 1 cycle too early)

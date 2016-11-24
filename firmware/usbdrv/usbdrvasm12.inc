@@ -82,13 +82,15 @@ foundK:
     push    YH                  ;2 [2]
 #ifndef MNHACK_INT_FREE
     lds     YL, usbInputBufOffset;2 [4]
-#else
-    clr     YL                  ;1 [3]
-;		nop                         ;1 [4]
-#endif
     clr     YH                  ;1 [5]
     subi    YL, lo8(-(usbRxBuf));1 [6]
     sbci    YH, hi8(-(usbRxBuf));1 [7]
+#else
+		rjmp    .+0                 ;2 [4]
+		nop													;1 [5]
+		ldi     YL, lo8((usbRxBuf)) ;1 [6]
+		ldi     YH, hi8((usbRxBuf)) ;1 [7]
+#endif
 
     sbis    USBIN, USBMINUS ;1 [8] we want two bits K [sample 1 cycle too early]
     rjmp    haveTwoBitsK    ;2 [10]

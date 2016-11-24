@@ -165,14 +165,16 @@ foundK:                         ;[-15]
     push    x4                  ;[-14]
 ;   [---]                       ;[-13]
 #ifndef MNHACK_INT_FREE
-    lds     YL, usbInputBufOffset;[-12] used to toggle the two usb receive buffers
-#else
-    clr     YL                   ;[-12]
-#endif
-;   [---]                       ;[-11]
+    lds     YL, usbInputBufOffset;[-12][-11] used to toggle the two usb receive buffers
     clr     YH                  ;[-10]
     subi    YL, lo8(-(usbRxBuf));[-9] [rx loop init]
     sbci    YH, hi8(-(usbRxBuf));[-8] [rx loop init]
+#else
+		rjmp    .+0                 ;[-12][-11]
+		nop													;[-10]
+		ldi     YL, lo8((usbRxBuf)) ;[-9] [rx loop init]
+		ldi     YH, hi8((usbRxBuf)) ;[-8] [rx loop init]
+#endif
     push    shift               ;[-7]
 ;   [---]                       ;[-6]
     ldi		shift, 0x80			;[-5] the last bit is the end of byte marker for the pid receiver loop

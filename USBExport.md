@@ -9,12 +9,12 @@ The new bootloader is slightly larger in size, and the inflation is mostly due t
 are not used in the bootloader, but potentially useful in user programs.
 
 Bootloader size (for attiny85):
-- No interrupt endpoint: 1906 bytes
-- With interrupt endpoint 1: 2088 bytes
-- With interrupt endpoint 1 (+halt support): 2164 bytes
-- With interrupt endpoint 1 (+halt support, usbFunctionWrite): 2252 bytes (default configuration)
-- With interrupt endpoint 1 (+halt support, long transfer, usbFunctionWrite): 2300 bytes
-- With interrupt endpoint 1 (+halt support, long transfer, usbFunctionWrite/WriteOut): 2338 bytes
+- No interrupt endpoint: 1894 bytes
+- With interrupt endpoint 1: 2076 bytes
+- With interrupt endpoint 1 (+halt support): 2152 bytes
+- With interrupt endpoint 1 (+halt support, usbFunctionWrite): 2240 bytes (default configuration)
+- With interrupt endpoint 1 (+halt support, long transfer, usbFunctionWrite): 2288 bytes
+- With interrupt endpoint 1 (+halt support, long transfer, usbFunctionWrite/WriteOut): 2326 bytes
  
 # How to examples
 A modified Digistump DigiMouse library and Arduino project is included in the [examples direcotry](examples/DigisparkMouseLite).
