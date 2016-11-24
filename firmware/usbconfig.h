@@ -94,7 +94,7 @@
 	 * data from a static buffer, set it to 0 and return the data from
 	 * usbFunctionSetup(). This saves a couple of bytes.
 	 */
-	#define USB_CFG_IMPLEMENT_FN_WRITEOUT   1
+	#define USB_CFG_IMPLEMENT_FN_WRITEOUT   0
 	/* Define this to 1 if you want to use interrupt-out (or bulk out) endpoints.
 	 * You must implement the function usbFunctionWriteOut() which receives all
 	 * interrupt/bulk data sent to any endpoint other than 0. The endpoint number
@@ -111,7 +111,7 @@
  * where the driver's constants (descriptors) are located. Or in other words:
  * Define this to 1 for boot loaders on the ATMega128.
  */
-#define USB_CFG_LONG_TRANSFERS          1
+#define USB_CFG_LONG_TRANSFERS          0
 /* Define this to 1 if you want to send/receive blocks of more than 254 bytes
  * in a single control-in or control-out transfer. Note that the capability
  * for long transfers increases the driver size.
