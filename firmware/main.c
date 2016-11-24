@@ -386,7 +386,7 @@ void loopUSB(
 	bool (*f_afterPoll)(uint16_t rem_us, uchar dev_addr)
 ) {
 	do {
-		//uint16_t resetctr = 0;
+		//uint16_t resetctr = USB_RESET_TIMEOUT;
 		register uint16_t resetctr asm("r24") = USB_RESET_TIMEOUT;
 		//uint16_t fastctr = USB_POLL_TIMEOUT;
 		register uint16_t fastctr asm("r26") = USB_POLL_TIMEOUT;
@@ -522,8 +522,9 @@ void main(void) {
 		shutdownUSB();
 
 		idlePolls.w = AUTO_EXIT_NO_USB_MS? (AUTO_EXIT_MS-AUTO_EXIT_NO_USB_MS)/5 : 0;
-		command = cmd_local_nop;
-		currentAddress.w = 0;
+		// BSS Initialized
+		//command = cmd_local_nop;
+		//currentAddress.w = 0;
 
 		initUSB(
 			#if EXPORT_USB

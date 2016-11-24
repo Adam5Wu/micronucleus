@@ -32,24 +32,24 @@ documentation of the entire driver.
 /* raw USB registers / interface to assembler code: */
 #ifndef MNHACK_INT_FREE
 	uchar usbRxBuf[2*USB_BUFSIZE];	/* double raw RX buffer: PID, 8 bytes data, 2 bytes CRC */
-	uchar	usbInputBufOffset;	/* offset in usbRxBuf used for low level receiving */
+	uchar	usbInputBufOffset;				/* offset in usbRxBuf used for low level receiving */
 #else
-	uchar usbRxBuf[USB_BUFSIZE];	/* raw RX buffer: PID, 8 bytes data, 2 bytes CRC */
+	uchar usbRxBuf[USB_BUFSIZE];		/* raw RX buffer: PID, 8 bytes data, 2 bytes CRC */
 #endif
-uchar			usbDeviceAddr;			/* assigned during enumeration, defaults to 0 */
-uchar			usbNewDeviceAddr;	/* device ID which should be set after status phase */
-uchar			usbConfiguration;	/* currently selected configuration. Administered by driver, but not used */
-volatile schar usbRxLen;				/* = 0; number of bytes in usbRxBuf; 0 means free, -1 for flow control */
-uchar			usbCurrentTok;			/* last token received or endpoint number for last OUT token if != 0 */
-uchar			usbRxToken;				/* token for data we received; or endpont number for last OUT */
+uchar			usbDeviceAddr;					/* assigned during enumeration, defaults to 0 */
+uchar			usbNewDeviceAddr;				/* device ID which should be set after status phase */
+uchar			usbConfiguration;				/* currently selected configuration. Administered by driver, but not used */
+volatile schar usbRxLen;					/* = 0; number of bytes in usbRxBuf; 0 means free, -1 for flow control */
+uchar			usbCurrentTok;					/* last token received or endpoint number for last OUT token if != 0 */
+uchar			usbRxToken;							/* token for data we received; or endpont number for last OUT */
 #ifdef MNHACK_NO_DATASECTION
-	volatile uchar usbTxLen;	/* number of bytes to transmit with next IN token or handshake token */
+	volatile uchar usbTxLen;				/* number of bytes to transmit with next IN token or handshake token */
 #else
 	volatile uchar usbTxLen = USBPID_NAK;	/* number of bytes to transmit with next IN token or handshake token */
 #endif
-uchar			usbTxBuf[USB_BUFSIZE];/* data to transmit with next IN, free if usbTxLen contains handshake token */
+uchar			usbTxBuf[USB_BUFSIZE];	/* data to transmit with next IN, free if usbTxLen contains handshake token */
 #if USB_COUNT_SOF
-volatile uchar	usbSofCount;		/* incremented by assembler module every SOF */
+volatile uchar	usbSofCount;			/* incremented by assembler module every SOF */
 #endif
 #if USB_CFG_HAVE_INTRIN_ENDPOINT && !USB_CFG_SUPPRESS_INTR_CODE
 	usbTxStatus_t	usbTxStatus1;
@@ -68,9 +68,9 @@ volatile uchar	usbSofCount;		/* incremented by assembler module every SOF */
 	static usbMsgLen_t usbMsgLen = USB_NO_MSG;	/* remaining number of bytes */
 #endif
 register usbMsgPtr_t usbMsgPtr	asm("r2");		// r2/r3: data to transmit next -- ROM or RAM address
-//usbMsgPtr_t usbMsgPtr;												/* data to transmit next -- ROM or RAM address */
+//usbMsgPtr_t usbMsgPtr;											/* data to transmit next -- ROM or RAM address */
 register uchar usbMsgFlags			asm("r4");		// r4: flag values see below
-//uchar usbMsgFlags;														/* flag values see below */
+//uchar usbMsgFlags;													/* flag values see below */
 
 #define USB_FLG_MSGPTR_IS_ROM	(1<<6)
 #define USB_FLG_USE_USER_RW		(1<<7)
@@ -468,7 +468,7 @@ static inline usbMsgLen_t usbDriverSetup(usbRequest_t *rq)
 		SWITCH_CASE(USBRQ_SET_ADDRESS)					/* 5 */
 			usbNewDeviceAddr = value;
 			USB_SET_ADDRESS_HOOK();
-		SWITCH_CASE(USBRQ_GET_DESCRIPTOR)			/* 6 */
+		SWITCH_CASE(USBRQ_GET_DESCRIPTOR)				/* 6 */
 			len = usbDriverDescriptor(rq);
 			goto skipMsgPtrAssignment;
 		SWITCH_CASE(USBRQ_GET_CONFIGURATION)		/* 8 */
