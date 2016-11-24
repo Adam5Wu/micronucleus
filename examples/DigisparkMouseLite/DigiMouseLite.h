@@ -35,7 +35,7 @@ usbMsgLen_t (*f_usbFunctionDescriptor)(struct usbRequest *rq)
 );
 
 // Compensate some process delays
-#define USB_POLLTIME_US 5420
+#define USB_POLLTIME_US 5300
 
 extern "C" void _loopUSB(
 	bool (*f_beforePoll)(uint16_t rem_us, uchar dev_addr),

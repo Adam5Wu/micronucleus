@@ -127,7 +127,7 @@ RTMODEL "__rt_version", "3"
 #   define polyH    r21
 #   define scratch  r23
 
-#else  /* __IAR_SYSTEMS_ASM__ */ 
+#else  /* __IAR_SYSTEMS_ASM__ */
 /* Register assignments for usbCrc16 on gcc */
 /* Calling conventions on gcc:
  * First parameter passed in r24/r25, second in r22/23 and so on.
@@ -164,7 +164,7 @@ RTMODEL "__rt_version", "3"
 ; unsigned table(unsigned char x)
 ; {
 ; unsigned    value;
-; 
+;
 ;     value = (unsigned)x << 6;
 ;     value ^= (unsigned)x << 7;
 ;     if(parity(x))
@@ -174,7 +174,7 @@ RTMODEL "__rt_version", "3"
 ; unsigned usbCrc16(unsigned char *argPtr, unsigned char argLen)
 ; {
 ; unsigned crc = 0xffff;
-; 
+;
 ;     while(argLen--)
 ;         crc = table(lo8(crc) ^ *argPtr++) ^ hi8(crc);
 ;     return ~crc;
@@ -189,7 +189,8 @@ RTMODEL "__rt_version", "3"
 ;   resCrc  r24+r25 / r16+r17
 ;   ptr     X / Z
 
-usbCrc16:
+usbCrc16Append:
+;usbCrc16:
     movw    ptrL, argPtrL
     ldi     resCrcL, 0xFF
     ldi     resCrcH, 0xFF
@@ -222,16 +223,16 @@ usbCrc16LoopTest:
     brsh    usbCrc16ByteLoop
     com     resCrcL
     com     resCrcH
-    ret
+;    ret
 
 ; extern unsigned usbCrc16Append(unsigned char *data, unsigned char len);
-usbCrc16Append:
-    rcall   usbCrc16
+;usbCrc16Append:
+;    rcall   usbCrc16
     st      ptr+, resCrcL
     st      ptr+, resCrcH
     ret
-    
-#else   // USB_USE_FAST_CRC 
+
+#else   // USB_USE_FAST_CRC
 
 ; This implementation is slower, but has less code size
 ;
@@ -245,6 +246,7 @@ usbCrc16Append:
 ;   scratch r23
 ;   resCrc  r24+r25 / r16+r17
 ;   ptr     X / Z
+
 usbCrc16Append:
 ;usbCrc16:
     mov     ptrL, argPtrL
@@ -282,7 +284,7 @@ usbCrcReady:
     st      ptr+, resCrcH
     ret
 
-#endif // USB_USE_FAST_CRC 
+#endif // USB_USE_FAST_CRC
 
 #undef argLen
 #undef argPtrL
@@ -315,7 +317,7 @@ usbCrcReady:
 #   define cnt16H   r31
 #   define cntH     r18
 
-#else  /* __IAR_SYSTEMS_ASM__ */ 
+#else  /* __IAR_SYSTEMS_ASM__ */
 /* Register assignments for usbMeasureFrameLength on gcc */
 /* Calling conventions on gcc:
  * First parameter passed in r24/r25, second in r22/23 and so on.

@@ -9,13 +9,13 @@ The new bootloader is slightly larger in size, and the inflation is mostly due t
 are not used in the bootloader, but potentially useful in user programs.
 
 Bootloader size (for attiny85):
-- No interrupt endpoint: 1894 bytes
-- With interrupt endpoint 1: 2076 bytes
-- With interrupt endpoint 1 (+halt support): 2152 bytes
-- With interrupt endpoint 1 (+halt support, usbFunctionWrite): 2240 bytes (default configuration)
-- With interrupt endpoint 1 (+halt support, long transfer, usbFunctionWrite): 2288 bytes
-- With interrupt endpoint 1 (+halt support, long transfer, usbFunctionWrite/WriteOut): 2326 bytes
- 
+- No interrupt endpoint: 1882 bytes
+- With interrupt endpoint 1: 2064 bytes
+- With interrupt endpoint 1 (+halt support): 2140 bytes
+- With interrupt endpoint 1 (+halt support, usbFunctionWrite): 2228 bytes (default configuration)
+- With interrupt endpoint 1 (+halt support, long transfer, usbFunctionWrite): 2276 bytes
+- With interrupt endpoint 1 (+halt support, long transfer, usbFunctionWrite/WriteOut): 2314 bytes
+
 # How to examples
 A modified Digistump DigiMouse library and Arduino project is included in the [examples direcotry](examples/DigisparkMouseLite).
 
@@ -29,7 +29,7 @@ The saving is over 2KB.
 ## Bootloader compatibility
 - This bootloader (with USB export) behaves exactly like the original, so completely compatible functionality-wise (except for slightly reduced user programe space)
   - User programs that include their own V-USB will still work as expected.
-  
+
 ## Non-standard VUSB implementation
 The bootloader uses [interrupt-free VUSB](https://cpldcpu.wordpress.com/2014/03/02/interrupt-free-v-usb/),
 as a consequence, user programs that wish to leverage the exported USB function also has to do it "the bootloader way".

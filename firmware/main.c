@@ -365,7 +365,7 @@ static inline void usbPollLite(void) {
 	//}
 }
 
-#define POOL_CYCLE						24
+#define POOL_CYCLE						21
 
 #define USB_RESET_MS					2.5
 #define USB_RESET_TIMEOUT			(uint16_t)(F_CPU/(1.0e3*POOL_CYCLE/USB_RESET_MS))
@@ -385,25 +385,21 @@ void loopUSB(
 	bool (*f_beforePoll)(uint16_t rem_us, uchar dev_addr),
 	bool (*f_afterPoll)(uint16_t rem_us, uchar dev_addr)
 ) {
-	//uint16_t resetctr = 0;
-	register uint16_t resetctr asm("r24") = 0;
 	do {
+		//uint16_t resetctr = 0;
+		register uint16_t resetctr asm("r24") = USB_RESET_TIMEOUT;
 		//uint16_t fastctr = USB_POLL_TIMEOUT;
 		register uint16_t fastctr asm("r26") = USB_POLL_TIMEOUT;
 
 		do {
 			if ((USBIN & USBMASK) != 0) resetctr = USB_RESET_TIMEOUT;
 
-			if (usbDeviceAddr && !--resetctr) { // reset encountered
-
+			if (!resetctr--) { // reset encountered
 				// bits from the reset handling of usbpoll()
 				usbNewDeviceAddr = 0;
 				usbDeviceAddr = 0;
 				usbResetStall();
 
-#if AUTO_EXIT_NO_USB_MS
-				idlePolls.w = max(idlePolls.w, (AUTO_EXIT_MS-AUTO_EXIT_NO_USB_MS)/5);
-#endif
 #if !OSCCAL_HAVE_XTAL
 				calibrateOscillatorASM();
 #endif
@@ -464,10 +460,7 @@ static inline void enterBootloader(void) {
 	if (stored_osc_calibration != 0xFF) {
 		OSCCAL = stored_osc_calibration;
 		nop();
-	} else
-#endif
-#if !OSCCAL_HAVE_XTAL
-		calibrateOscillatorASM();
+	}
 #endif
 
 	initHardware();
@@ -547,6 +540,10 @@ void main(void) {
 				usbFunctionDescriptor
 			#endif
 		);
+
+#if !OSCCAL_HAVE_XTAL
+		calibrateOscillatorASM();
+#endif
 
 		loopUSB(CommandHandling, IdleCheck);
 
